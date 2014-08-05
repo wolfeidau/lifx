@@ -1,0 +1,15 @@
+package lifx;
+
+message Packet {
+  required bytes size = 1;                   // LE
+  required bytes protocol = 2;
+  required uint32 reserved1 = 3;              // Always 0x0000
+  required bytes target_mac_address = 4;
+  required bytes reserved2 = 5;              // Always 0x00
+  required bytes site = 6;                    // MAC address of gateway PAN controller bulb
+  required bytes reserved3 = 7;              // Always 0x00
+  required uint64 timestamp = 8;
+  required bytes packet_type = 9;            // LE
+  required bytes reserved4 = 10;             // Always 0x0000
+
+}
