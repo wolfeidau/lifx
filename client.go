@@ -69,6 +69,14 @@ func (c *Client) StartDiscovery() error {
 
 		for t := range c.discoTicker.C {
 			fmt.Println("Tick at", t)
+			socket, _ := net.DialUDP("udp4", nil, &net.UDPAddr{
+				IP:   net.IPv4(255, 255, 255, 255),
+				Port: BroadcastPort,
+			})
+			p := NewPacket(GetPANgateway)
+			n, _ := p.Encode(socket)
+			//n, _ := socket.Write()
+			fmt.Println("Bcast sent %d", n)
 		}
 
 	}()
