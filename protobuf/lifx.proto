@@ -11,5 +11,93 @@ message Packet {
   required uint64 timestamp = 8;
   required bytes packet_type = 9;            // LE
   required bytes reserved4 = 10;             // Always 0x0000
-
+  optional Payload payload = 11;
 }
+
+
+message Payload {
+  extensions 100 to max;
+
+  enum Type {
+    getPanGateway = 1;
+    panGateway = 2;
+    getBulbLabel = 3;
+    bulbLabel = 4;
+    getLightState = 5;
+    lightStatus = 6;
+    setLightColor = 7;
+  }
+  required Type type = 1;
+}
+
+
+message getPanGateway {
+  extend Payload
+  {
+      required getPanGateway payload = 100; // Unique payload ID
+  }
+}
+
+message panGateway {
+  extend Payload
+  {
+      required panGateway payload = 101;
+  }
+  required bytes service = 1; //1 byte
+  required uint32 port = 2;
+}
+
+message getBulbLabel {
+  extend Payload
+  {
+      required getBulbLabel payload = 102;
+  }
+}
+
+message bulbLabel {
+  extend Payload
+  {
+      required bulbLabel payload = 103;
+  }
+  required string label = 1;
+}
+
+
+message getLightState {
+  extend Payload
+  {
+      required getLightState payload = 104;
+  }
+}
+
+message lightStatus {
+  extend Payload
+  {
+      required lightStatus payload = 105;
+  }
+
+  required bytes hue = 1;          // LE uint16
+  required bytes saturation = 2;   // LE uint16
+  required bytes brightness = 3;   // LE uint16
+  required bytes kelvin = 4;       // LE uint16
+  required bytes dim = 5;          // LE? uint16
+  required bytes power = 6;        // uint16
+  required string bulb_label = 7; // UTF-8 encoded string
+  required uint64 tags = 8;
+}
+
+
+
+message setLightColor {
+  extend Payload
+  {
+      required setLightColor payload = 106;
+  }
+
+  required bytes stream = 1;        // Unknown, potential "streaming" mode toggle? Set to 0x00 for now. 1 byte
+  required bytes hue= 2;         // LE NOTE: Wraps around at 0xff 0xff back to 0x00 0x00 which is a primary red colour. uint16
+  required bytes saturation = 3;  // LE uint16
+  required bytes brightness = 4;  // LE uint16
+  required bytes kelvin = 5;      // LE i.e. colour temperature (whites wheel in apps)
+  required uint32 fade_time = 6;   // LE Length of fade action, in seconds
+  }
