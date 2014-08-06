@@ -2,6 +2,7 @@
 // source: lifx.proto
 // DO NOT EDIT!
 
+
 /*
 Package lifx is a generated protocol buffer package.
 

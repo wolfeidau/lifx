@@ -101,3 +101,4 @@ message setLightColor {
   required bytes kelvin = 5;      // LE i.e. colour temperature (whites wheel in apps)
   required uint32 fade_time = 6;   // LE Length of fade action, in seconds
   }
+  
