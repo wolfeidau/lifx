@@ -10,16 +10,16 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-type Command interface {
+type command interface {
 	SetSiteAddr(site [6]byte)
 	SetLifxAddr(addr [6]byte)
 	WriteTo(wr io.Writer) (int, error)
 }
 
-func DecodeCommand(buf []byte) (Command, error) {
+func decodeCommand(buf []byte) (command, error) {
 
 	// read and validate the packet header
-	ph, err := DecodePacketHeader(buf)
+	ph, err := decodePacketHeader(buf)
 
 	if err != nil {
 		return nil, err
@@ -27,61 +27,61 @@ func DecodeCommand(buf []byte) (Command, error) {
 
 	switch ph.PacketType {
 	case PktPANgateway:
-		return DecodePANGatewayCommand(ph, buf[HeaderLen:])
+		return decodePANGatewayCommand(ph, buf[HeaderLen:])
 	case PktLightState:
-		return DecodeLightStateCommand(ph, buf[HeaderLen:])
+		return decodeLightStateCommand(ph, buf[HeaderLen:])
 	case PktPowerState:
-		return DecodePowerStateCommand(ph, buf[HeaderLen:])
+		return decodePowerStateCommand(ph, buf[HeaderLen:])
 	case PktTags:
-		return DecodeTagsCommand(ph, buf[HeaderLen:])
+		return decodeTagsCommand(ph, buf[HeaderLen:])
 	}
 
 	return nil, errors.New("command not found")
 }
 
-type CommandPacket struct {
-	Header *PacketHeader
+type commandPacket struct {
+	Header *packetHeader
 }
 
-func (c *CommandPacket) SetSiteAddr(site [6]byte) {
+func (c *commandPacket) SetSiteAddr(site [6]byte) {
 	c.Header.Site = site
 }
 
-func (c *CommandPacket) SetLifxAddr(addr [6]byte) {
+func (c *commandPacket) SetLifxAddr(addr [6]byte) {
 	c.Header.TargetMacAddress = addr
 }
 
-func (c *CommandPacket) WriteTo(wr io.Writer) (int, error) {
+func (c *commandPacket) WriteTo(wr io.Writer) (int, error) {
 	return writeHeaderOnly(c.Header, wr)
 }
 
 // GetPANGatewayCommand 0x02
-type GetPANGatewayCommand struct {
-	CommandPacket
+type getPANGatewayCommand struct {
+	commandPacket
 }
 
-func NewGetPANGatewayCommand() *GetPANGatewayCommand {
-	cmd := &GetPANGatewayCommand{}
-	cmd.Header = NewPacketHeader(PktGetPANgateway)
+func newGetPANGatewayCommand() *getPANGatewayCommand {
+	cmd := &getPANGatewayCommand{}
+	cmd.Header = newPacketHeader(PktGetPANgateway)
 	return cmd
 }
 
-type PANGatewayCommand struct {
-	CommandPacket
+type panGatewayCommand struct {
+	commandPacket
 	Payload struct {
 		Service uint8
 		Port    uint16
 	}
 }
 
-func DecodePANGatewayCommand(ph *PacketHeader, payload []byte) (*PANGatewayCommand, error) {
-	cmd := &PANGatewayCommand{}
+func decodePANGatewayCommand(ph *packetHeader, payload []byte) (*panGatewayCommand, error) {
+	cmd := &panGatewayCommand{}
 
 	cmd.Header = ph
 
 	// decode payload
 	log.Printf("payload len : %d", len(payload))
-	DecodePayload(payload, &cmd.Payload)
+	decodePayload(payload, &cmd.Payload)
 
 	log.Printf("Command: \n %s", spew.Sdump(cmd))
 
@@ -89,23 +89,23 @@ func DecodePANGatewayCommand(ph *PacketHeader, payload []byte) (*PANGatewayComma
 }
 
 // GetLightStateCommand 0x65
-type GetLightStateCommand struct {
-	CommandPacket
+type getLightStateCommand struct {
+	commandPacket
 }
 
-func NewGetLightStateCommand(site [6]byte) *GetLightStateCommand {
-	ph := NewPacketHeader(PktGetLightState)
+func newGetLightStateCommand(site [6]byte) *getLightStateCommand {
+	ph := newPacketHeader(PktGetLightState)
 	ph.Protocol = 13312
 	ph.Site = site
 
-	cmd := &GetLightStateCommand{}
+	cmd := &getLightStateCommand{}
 	cmd.Header = ph
 	return cmd
 }
 
 // LightStateCommand 0x6b
-type LightStateCommand struct {
-	CommandPacket
+type lightStateCommand struct {
+	commandPacket
 	Payload struct {
 		Hue        uint16
 		Saturation uint16
@@ -118,13 +118,13 @@ type LightStateCommand struct {
 	}
 }
 
-func DecodeLightStateCommand(ph *PacketHeader, payload []byte) (*LightStateCommand, error) {
-	cmd := &LightStateCommand{}
+func decodeLightStateCommand(ph *packetHeader, payload []byte) (*lightStateCommand, error) {
+	cmd := &lightStateCommand{}
 	cmd.Header = ph
 
 	// decode payload
 	log.Printf("payload len : %d", len(payload))
-	DecodePayload(payload, &cmd.Payload)
+	decodePayload(payload, &cmd.Payload)
 
 	log.Printf("Command: \n %s", spew.Sdump(cmd))
 
@@ -132,8 +132,8 @@ func DecodeLightStateCommand(ph *PacketHeader, payload []byte) (*LightStateComma
 }
 
 // SetLightColour 0x66
-type SetLightColour struct {
-	CommandPacket
+type setLightColour struct {
+	commandPacket
 	Payload struct {
 		Stream     uint8
 		Hue        uint16
@@ -144,12 +144,12 @@ type SetLightColour struct {
 	}
 }
 
-func NewSetLightColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) *SetLightColour {
-	ph := NewPacketHeader(PktSetLightColour)
+func newSetLightColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) *setLightColour {
+	ph := newPacketHeader(PktSetLightColour)
 	ph.Protocol = 13312
 	ph.Size = 49
 
-	cmd := &SetLightColour{}
+	cmd := &setLightColour{}
 
 	cmd.Header = ph
 
@@ -162,7 +162,7 @@ func NewSetLightColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing
 	return cmd
 }
 
-func (c *SetLightColour) WriteTo(wr io.Writer) (int, error) {
+func (c *setLightColour) WriteTo(wr io.Writer) (int, error) {
 
 	buf := new(bytes.Buffer)
 
@@ -176,43 +176,43 @@ func (c *SetLightColour) WriteTo(wr io.Writer) (int, error) {
 }
 
 // GetPowerStateCommand 0x14
-type GetPowerStateCommand struct {
-	CommandPacket
+type getPowerStateCommand struct {
+	commandPacket
 }
 
-func NewGetPowerStateCommand(site [6]byte, lifxAddress [6]byte) *GetPowerStateCommand {
-	ph := NewPacketHeader(PktGetPowerState)
+func newGetPowerStateCommand(site [6]byte, lifxAddress [6]byte) *getPowerStateCommand {
+	ph := newPacketHeader(PktGetPowerState)
 	ph.Protocol = 13312
 	ph.Site = site
 	ph.TargetMacAddress = lifxAddress
 
-	cmd := &GetPowerStateCommand{}
+	cmd := &getPowerStateCommand{}
 	cmd.Header = ph
 	return cmd
 }
 
 // SetPowerStateCommand 0x15
-type SetPowerStateCommand struct {
-	CommandPacket
+type setPowerStateCommand struct {
+	commandPacket
 	Payload struct {
 		OnOff uint16
 	}
 }
 
-func NewSetPowerStateCommand(onoff uint16) *SetPowerStateCommand {
-	ph := NewPacketHeader(PktSetPowerState)
+func newSetPowerStateCommand(onoff uint16) *setPowerStateCommand {
+	ph := newPacketHeader(PktSetPowerState)
 
 	ph.Size = 38
 	ph.Protocol = 13312
 
-	cmd := &SetPowerStateCommand{}
+	cmd := &setPowerStateCommand{}
 	cmd.Header = ph
 	cmd.Payload.OnOff = onoff
 
 	return cmd
 }
 
-func (c *SetPowerStateCommand) WriteTo(wr io.Writer) (int, error) {
+func (c *setPowerStateCommand) WriteTo(wr io.Writer) (int, error) {
 
 	buf := []byte{0x0, 0x0}
 
@@ -222,20 +222,20 @@ func (c *SetPowerStateCommand) WriteTo(wr io.Writer) (int, error) {
 }
 
 // PowerStateCommand 0x16
-type PowerStateCommand struct {
-	CommandPacket
+type powerStateCommand struct {
+	commandPacket
 	Payload struct {
 		OnOff uint16
 	}
 }
 
-func DecodePowerStateCommand(ph *PacketHeader, payload []byte) (*PowerStateCommand, error) {
-	cmd := &PowerStateCommand{}
+func decodePowerStateCommand(ph *packetHeader, payload []byte) (*powerStateCommand, error) {
+	cmd := &powerStateCommand{}
 	cmd.Header = ph
 
 	// decode payload
 	log.Printf("payload len : %d", len(payload))
-	DecodePayload(payload, &cmd.Payload)
+	decodePayload(payload, &cmd.Payload)
 
 	log.Printf("Command: \n %s", spew.Sdump(cmd))
 
@@ -243,27 +243,27 @@ func DecodePowerStateCommand(ph *PacketHeader, payload []byte) (*PowerStateComma
 }
 
 // GetTagsCommand 0x1a
-type GetTagsCommand struct {
-	CommandPacket
+type getTagsCommand struct {
+	commandPacket
 }
 
-func NewGetTagsCommand(site [6]byte) *GetTagsCommand {
-	ph := NewPacketHeader(PktGetTags)
+func newGetTagsCommand(site [6]byte) *getTagsCommand {
+	ph := newPacketHeader(PktGetTags)
 	ph.Protocol = 13312
 	ph.Site = site
-	cmd := &GetTagsCommand{}
+	cmd := &getTagsCommand{}
 	cmd.Header = ph
 	return cmd
 }
 
 // TagsCommand 0x1c
-type TagsCommand struct {
-	CommandPacket
+type tagsCommand struct {
+	commandPacket
 }
 
-func DecodeTagsCommand(ph *PacketHeader, payload []byte) (*TagsCommand, error) {
+func decodeTagsCommand(ph *packetHeader, payload []byte) (*tagsCommand, error) {
 
-	cmd := &TagsCommand{}
+	cmd := &tagsCommand{}
 	cmd.Header = ph
 
 	// decode payload
@@ -272,7 +272,7 @@ func DecodeTagsCommand(ph *PacketHeader, payload []byte) (*TagsCommand, error) {
 	return cmd, nil
 }
 
-func writeHeaderOnly(h *PacketHeader, wr io.Writer) (int, error) {
+func writeHeaderOnly(h *packetHeader, wr io.Writer) (int, error) {
 	buf := new(bytes.Buffer)
 	n, err := h.Encode(buf)
 
@@ -283,7 +283,7 @@ func writeHeaderOnly(h *PacketHeader, wr io.Writer) (int, error) {
 	return wr.Write(buf.Bytes())
 }
 
-func writeHeaderAndPayload(h *PacketHeader, payload []byte, wr io.Writer) (int, error) {
+func writeHeaderAndPayload(h *packetHeader, payload []byte, wr io.Writer) (int, error) {
 	buf := new(bytes.Buffer)
 	n, err := h.Encode(buf)
 

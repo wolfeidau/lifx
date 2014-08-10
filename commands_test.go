@@ -10,7 +10,7 @@ func TestGetPANGatewayCommandWrite(t *testing.T) {
 
 	buf := new(bytes.Buffer)
 
-	c := NewGetPANGatewayCommand()
+	c := newGetPANGatewayCommand()
 
 	n, err := c.WriteTo(buf)
 
@@ -32,7 +32,7 @@ func TestPANGatewayCommandDecode(t *testing.T) {
 
 	buf := panGatewayMsg()
 
-	cmd, err := DecodeCommand(buf)
+	cmd, err := decodeCommand(buf)
 
 	if err != nil {
 		t.Error(err)
@@ -45,12 +45,12 @@ func TestPANGatewayCommandDecode(t *testing.T) {
 	}
 
 	switch cmd := cmd.(type) {
-	case *PANGatewayCommand:
-		if !reflect.DeepEqual(expSite, cmd.header.Site) {
-			t.Fatalf("expected % x, got: % x", expSite, cmd.header.Site)
+	case *panGatewayCommand:
+		if !reflect.DeepEqual(expSite, cmd.Header.Site) {
+			t.Fatalf("expected % x, got: % x", expSite, cmd.Header.Site)
 		}
 	default:
-		t.Fatal("expected PANGatewayCommand")
+		t.Fatal("expected panGatewayCommand")
 	}
 
 }
@@ -61,7 +61,10 @@ func TestSetPowerStateCommandWrite(t *testing.T) {
 	addr := [6]byte{0xd0, 0x73, 0xd5, 0x00, 0x35, 0xf7}
 	site := [6]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 
-	c := NewSetPowerStateCommand(addr, site, bulbOn)
+	c := newSetPowerStateCommand(bulbOn)
+
+	c.SetLifxAddr(addr)
+	c.SetSiteAddr(site)
 
 	n, err := c.WriteTo(buf)
 
@@ -83,7 +86,7 @@ func TestPowerStateCommandDecode(t *testing.T) {
 
 	buf := powerStateMsg()
 
-	cmd, err := DecodeCommand(buf)
+	cmd, err := decodeCommand(buf)
 
 	if err != nil {
 		t.Error(err)
@@ -96,11 +99,11 @@ func TestPowerStateCommandDecode(t *testing.T) {
 	}
 
 	switch cmd := cmd.(type) {
-	case *PANGatewayCommand:
-		if !reflect.DeepEqual(expSite, cmd.header.Site) {
-			t.Fatalf("expected % x, got: % x", expSite, cmd.header.Site)
+	case *panGatewayCommand:
+		if !reflect.DeepEqual(expSite, cmd.Header.Site) {
+			t.Fatalf("expected % x, got: % x", expSite, cmd.Header.Site)
 		}
 	default:
-		t.Fatal("expected PANGatewayCommand")
+		t.Fatal("expected panGatewayCommand")
 	}
 }

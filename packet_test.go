@@ -8,7 +8,7 @@ import (
 )
 
 func TestPacketEncodeGetPANgateway(t *testing.T) {
-	p := NewPacketHeader(PktGetPANgateway)
+	p := newPacketHeader(PktGetPANgateway)
 	buf := new(bytes.Buffer)
 
 	n, err := p.Encode(buf)

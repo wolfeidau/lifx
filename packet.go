@@ -30,7 +30,7 @@ const (
 	PktTags    uint16 = 0x1c
 )
 
-type PacketHeader struct {
+type packetHeader struct {
 	Size             uint16
 	Protocol         uint16
 	Reserved1        uint32
@@ -43,8 +43,8 @@ type PacketHeader struct {
 	Reserved4        uint16
 }
 
-func NewPacketHeader(packetType uint16) *PacketHeader {
-	p := &PacketHeader{}
+func newPacketHeader(packetType uint16) *packetHeader {
+	p := &packetHeader{}
 	p.Size = 36
 	p.Protocol = 21504
 	p.Reserved1 = 0x0000
@@ -55,8 +55,8 @@ func NewPacketHeader(packetType uint16) *PacketHeader {
 	return p
 }
 
-func DecodePacketHeader(buf []byte) (*PacketHeader, error) {
-	p := &PacketHeader{}
+func decodePacketHeader(buf []byte) (*packetHeader, error) {
+	p := &packetHeader{}
 	r := bytes.NewBuffer(buf)
 	err := binary.Read(r, binary.LittleEndian, p)
 
@@ -67,7 +67,7 @@ func DecodePacketHeader(buf []byte) (*PacketHeader, error) {
 	return p, err
 }
 
-func (p *PacketHeader) Encode(wr io.Writer) (int, error) {
+func (p *packetHeader) Encode(wr io.Writer) (int, error) {
 
 	buf := new(bytes.Buffer)
 
@@ -82,7 +82,7 @@ func (p *PacketHeader) Encode(wr io.Writer) (int, error) {
 	return wr.Write(buf.Bytes())
 }
 
-func DecodePayload(buf []byte, payload interface{}) error {
+func decodePayload(buf []byte, payload interface{}) error {
 	r := bytes.NewBuffer(buf)
 	return binary.Read(r, binary.LittleEndian, payload)
 }

@@ -17,17 +17,17 @@ const (
 var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 
 type Bulb struct {
-	lifxAddress [6]byte // incoming messages are desimanated by lifx address
+	LifxAddress [6]byte // incoming messages are desimanated by lifx address
 
-	lastLightState *LightStateCommand
+	lastLightState *lightStateCommand
 	lastSeen       time.Time
 }
 
-func NewBulb(cmd *LightStateCommand) *Bulb {
-	return &Bulb{lifxAddress: cmd.Header.TargetMacAddress, lastLightState: cmd}
+func newBulb(cmd *lightStateCommand) *Bulb {
+	return &Bulb{LifxAddress: cmd.Header.TargetMacAddress, lastLightState: cmd}
 }
 
-type Gateway struct {
+type gateway struct {
 	lifxAddress [6]byte
 	hostAddress string
 	Port        uint16
@@ -36,9 +36,9 @@ type Gateway struct {
 	socket      *net.UDPConn
 }
 
-func NewGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]byte) (*Gateway, error) {
+func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]byte) (*gateway, error) {
 
-	gw := &Gateway{lifxAddress: lifxAddress, hostAddress: hostAddress, Port: port, Site: site}
+	gw := &gateway{lifxAddress: lifxAddress, hostAddress: hostAddress, Port: port, Site: site}
 
 	// can we connect to the gw
 	addr, err := net.ResolveUDPAddr("udp4", gw.hostAddress)
@@ -57,7 +57,7 @@ func NewGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]by
 	return gw, nil
 }
 
-func (g *Gateway) SendTo(cmd Command) error {
+func (g *gateway) sendTo(cmd command) error {
 
 	// send to globe
 	n, err := cmd.WriteTo(g.socket)
@@ -71,20 +71,20 @@ func (g *Gateway) SendTo(cmd Command) error {
 	return nil
 }
 
-func (g *Gateway) findBulbs() error {
+func (g *gateway) findBulbs() error {
 
 	// get Light State
-	lcmd := NewGetLightStateCommand(g.Site)
+	lcmd := newGetLightStateCommand(g.Site)
 
-	err := g.SendTo(lcmd)
+	err := g.sendTo(lcmd)
 
 	if err != nil {
 		return err
 	}
 
-	tcmd := NewGetTagsCommand(g.Site)
+	tcmd := newGetTagsCommand(g.Site)
 
-	err = g.SendTo(tcmd)
+	err = g.sendTo(tcmd)
 
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (g *Gateway) findBulbs() error {
 }
 
 type Client struct {
-	gateways      []*Gateway
+	gateways      []*gateway
 	bulbs         []*Bulb
 	intervalID    int
 	DiscoInterval int
@@ -123,20 +123,10 @@ func (c *Client) StartDiscovery() (err error) {
 	// once you pop you can't stop
 	go func() {
 
+		c.sendDiscovery(time.Now())
+
 		for t := range c.discoTicker.C {
-			log.Println("Discovery sent at", t)
-			socket, _ := net.DialUDP("udp4", nil, &net.UDPAddr{
-				IP:   net.IPv4(255, 255, 255, 255),
-				Port: BroadcastPort,
-			})
-			p := NewPacketHeader(PktGetPANgateway)
-			n, _ := p.Encode(socket)
-
-			log.Printf("Bcast sent %d", n)
-
-			log.Printf("gateways %v", c.gateways)
-			log.Printf("bulbs %v", c.bulbs)
-
+			c.sendDiscovery(t)
 		}
 
 	}()
@@ -146,42 +136,42 @@ func (c *Client) StartDiscovery() (err error) {
 
 func (b *Client) LightsOn() error {
 
-	cmd := NewSetPowerStateCommand(bulbOn)
+	cmd := newSetPowerStateCommand(bulbOn)
 
 	return b.sendToAll(cmd)
 }
 
 func (b *Client) LightsOff() error {
 
-	cmd := NewSetPowerStateCommand(bulbOff)
+	cmd := newSetPowerStateCommand(bulbOff)
 
 	return b.sendToAll(cmd)
 }
 
 func (b *Client) LightsColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error {
 
-	cmd := NewSetLightColour(hue, sat, lum, kelvin, timing)
+	cmd := newSetLightColour(hue, sat, lum, kelvin, timing)
 
 	return b.sendToAll(cmd)
 }
 
 func (b *Client) LightOn(bulb *Bulb) error {
 
-	cmd := NewSetPowerStateCommand(bulbOn)
+	cmd := newSetPowerStateCommand(bulbOn)
 
 	return b.sendTo(bulb, cmd)
 }
 
 func (b *Client) LightOff(bulb *Bulb) error {
 
-	cmd := NewSetPowerStateCommand(bulbOff)
+	cmd := newSetPowerStateCommand(bulbOff)
 
 	return b.sendTo(bulb, cmd)
 }
 
 func (b *Client) LightColour(bulb *Bulb, hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error {
 
-	cmd := NewSetLightColour(hue, sat, lum, kelvin, timing)
+	cmd := newSetLightColour(hue, sat, lum, kelvin, timing)
 
 	return b.sendTo(bulb, cmd)
 }
@@ -190,9 +180,9 @@ func (b *Client) GetBulbs() []*Bulb {
 	return b.bulbs
 }
 
-func (c *Client) sendTo(bulb *Bulb, cmd Command) error {
+func (c *Client) sendTo(bulb *Bulb, cmd command) error {
 
-	cmd.SetLifxAddr(bulb.lifxAddress) // ensure the message is addressed to the correct bulb
+	cmd.SetLifxAddr(bulb.LifxAddress) // ensure the message is addressed to the correct bulb
 
 	for _, gw := range c.gateways {
 		log.Printf("sending command to %s", gw.hostAddress)
@@ -205,7 +195,7 @@ func (c *Client) sendTo(bulb *Bulb, cmd Command) error {
 	return nil
 }
 
-func (c *Client) sendToAll(cmd Command) error {
+func (c *Client) sendToAll(cmd command) error {
 	for _, gw := range c.gateways {
 		log.Printf("sending command to %s", gw.hostAddress)
 		cmd.SetSiteAddr(gw.Site) // update the site address so all globes change
@@ -231,14 +221,14 @@ func (c *Client) startMainEventLoop() {
 
 		log.Printf("Received buffer from %+v of %x", addr, buf[:n])
 
-		cmd, err := DecodeCommand(buf[:n])
+		cmd, err := decodeCommand(buf[:n])
 
 		switch cmd := cmd.(type) {
-		case *PANGatewayCommand:
+		case *panGatewayCommand:
 
 			// found a gw
 			if cmd.Payload.Service == 1 {
-				gw, err := NewGateway(cmd.Header.TargetMacAddress, addr.String(), cmd.Payload.Port, cmd.Header.Site)
+				gw, err := newGateway(cmd.Header.TargetMacAddress, addr.String(), cmd.Payload.Port, cmd.Header.Site)
 				if err != nil {
 					log.Printf("failed to setup peer connection to gw")
 				} else {
@@ -246,10 +236,10 @@ func (c *Client) startMainEventLoop() {
 				}
 			}
 
-		case *LightStateCommand:
+		case *lightStateCommand:
 
 			// found a bulb
-			bulb := NewBulb(cmd)
+			bulb := newBulb(cmd)
 
 			c.addBulb(bulb)
 
@@ -261,7 +251,24 @@ func (c *Client) startMainEventLoop() {
 	}
 }
 
-func (c *Client) addGateway(gw *Gateway) {
+func (c *Client) sendDiscovery(t time.Time) {
+
+	log.Println("Discovery sent at", t)
+	socket, _ := net.DialUDP("udp4", nil, &net.UDPAddr{
+		IP:   net.IPv4(255, 255, 255, 255),
+		Port: BroadcastPort,
+	})
+	p := newPacketHeader(PktGetPANgateway)
+	n, _ := p.Encode(socket)
+
+	log.Printf("Bcast sent %d", n)
+
+	log.Printf("gateways %v", c.gateways)
+	log.Printf("bulbs %v", c.bulbs)
+
+}
+
+func (c *Client) addGateway(gw *gateway) {
 	if !gatewayInSlice(gw, c.gateways) {
 		log.Printf("Added gw %v", gw)
 		gw.lastSeen = time.Now()
@@ -285,13 +292,13 @@ func (c *Client) addBulb(bulb *Bulb) {
 		bulb.lastSeen = time.Now()
 	}
 	for _, lbulb := range c.bulbs {
-		if bulb.lifxAddress == lbulb.lifxAddress {
+		if bulb.LifxAddress == lbulb.LifxAddress {
 			lbulb.lastSeen = time.Now()
 		}
 	}
 }
 
-func gatewayInSlice(a *Gateway, list []*Gateway) bool {
+func gatewayInSlice(a *gateway, list []*gateway) bool {
 	for _, b := range list {
 		// this needs further investigation
 		if a.lifxAddress == b.lifxAddress && a.Port == b.Port && a.hostAddress == b.hostAddress {
@@ -304,7 +311,7 @@ func gatewayInSlice(a *Gateway, list []*Gateway) bool {
 func bulbInSlice(a *Bulb, list []*Bulb) bool {
 	for _, b := range list {
 		// this needs further investigation
-		if a.lifxAddress == b.lifxAddress {
+		if a.LifxAddress == b.LifxAddress {
 			return true
 		}
 	}
