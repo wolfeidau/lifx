@@ -3,6 +3,7 @@ package lifx
 import (
 	"log"
 	"net"
+	"reflect"
 	"time"
 )
 
@@ -60,13 +61,13 @@ func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]by
 func (g *gateway) sendTo(cmd command) error {
 
 	// send to globe
-	n, err := cmd.WriteTo(g.socket)
+	_, err := cmd.WriteTo(g.socket)
 
 	if err != nil {
 		return err
 	}
 
-	log.Printf("wrote %d", n)
+	log.Printf("Sent command to gateway %s", reflect.TypeOf(cmd))
 
 	return nil
 }
@@ -219,9 +220,15 @@ func (c *Client) startMainEventLoop() {
 			log.Fatalf("Woops %s", err)
 		}
 
-		log.Printf("Received buffer from %+v of %x", addr, buf[:n])
+		//		log.Printf("Received buffer from %+v of %x", addr, buf[:n])
 
 		cmd, err := decodeCommand(buf[:n])
+
+		if err != nil {
+			log.Printf("Error processing command: %v", err)
+			continue
+		}
+		log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
 
 		switch cmd := cmd.(type) {
 		case *panGatewayCommand:
@@ -244,8 +251,6 @@ func (c *Client) startMainEventLoop() {
 			c.addBulb(bulb)
 
 		default:
-			log.Printf("cmd %v err %s", cmd, err)
-
 		}
 
 	}
@@ -253,15 +258,22 @@ func (c *Client) startMainEventLoop() {
 
 func (c *Client) sendDiscovery(t time.Time) {
 
-	log.Println("Discovery sent at", t)
-	socket, _ := net.DialUDP("udp4", nil, &net.UDPAddr{
+	log.Println("Discovery packet sent at", t)
+	socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{
 		IP:   net.IPv4(255, 255, 255, 255),
 		Port: BroadcastPort,
 	})
-	p := newPacketHeader(PktGetPANgateway)
-	n, _ := p.Encode(socket)
 
-	log.Printf("Bcast sent %d", n)
+	if err != nil {
+		return
+	}
+
+	defer socket.Close()
+
+	p := newPacketHeader(PktGetPANgateway)
+	_, _ = p.Encode(socket)
+
+	//	log.Printf("Bcast sent %d", n)
 
 	log.Printf("gateways %v", c.gateways)
 	log.Printf("bulbs %v", c.bulbs)

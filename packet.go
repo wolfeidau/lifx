@@ -77,7 +77,7 @@ func (p *packetHeader) Encode(wr io.Writer) (int, error) {
 		log.Fatalf("Woops %s", err)
 	}
 
-	log.Printf("encode % x", buf.Bytes())
+	//log.Printf("encode % x", buf.Bytes())
 
 	return wr.Write(buf.Bytes())
 }

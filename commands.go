@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
-	"log"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 type command interface {
@@ -36,7 +34,7 @@ func decodeCommand(buf []byte) (command, error) {
 		return decodeTagsCommand(ph, buf[HeaderLen:])
 	}
 
-	return nil, errors.New("command not found")
+	return nil, errors.New(fmt.Sprintf("Unrecognised type 0x%x", ph.PacketType))
 }
 
 type commandPacket struct {
@@ -80,10 +78,10 @@ func decodePANGatewayCommand(ph *packetHeader, payload []byte) (*panGatewayComma
 	cmd.Header = ph
 
 	// decode payload
-	log.Printf("payload len : %d", len(payload))
+	// log.Printf("payload len : %d", len(payload))
 	decodePayload(payload, &cmd.Payload)
 
-	log.Printf("Command: \n %s", spew.Sdump(cmd))
+	//log.Printf("Command: \n %s", spew.Sdump(cmd))
 
 	return cmd, nil
 }
@@ -123,10 +121,10 @@ func decodeLightStateCommand(ph *packetHeader, payload []byte) (*lightStateComma
 	cmd.Header = ph
 
 	// decode payload
-	log.Printf("payload len : %d", len(payload))
+	//log.Printf("payload len : %d", len(payload))
 	decodePayload(payload, &cmd.Payload)
 
-	log.Printf("Command: \n %s", spew.Sdump(cmd))
+	//log.Printf("Command: \n %s", spew.Sdump(cmd))
 
 	return cmd, nil
 }
@@ -234,10 +232,10 @@ func decodePowerStateCommand(ph *packetHeader, payload []byte) (*powerStateComma
 	cmd.Header = ph
 
 	// decode payload
-	log.Printf("payload len : %d", len(payload))
+	//log.Printf("payload len : %d", len(payload))
 	decodePayload(payload, &cmd.Payload)
 
-	log.Printf("Command: \n %s", spew.Sdump(cmd))
+	//log.Printf("Command: \n %s", spew.Sdump(cmd))
 
 	return cmd, nil
 }
@@ -267,7 +265,7 @@ func decodeTagsCommand(ph *packetHeader, payload []byte) (*tagsCommand, error) {
 	cmd.Header = ph
 
 	// decode payload
-	log.Printf("payload len : %d", len(payload))
+	//log.Printf("payload len : %d", len(payload))
 
 	return cmd, nil
 }
