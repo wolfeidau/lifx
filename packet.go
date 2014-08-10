@@ -10,21 +10,37 @@ import (
 const (
 	HeaderLen = 36
 
-	GetPANgateway uint16 = 0x02
-	PANgateway    uint16 = 0x03
+	PktGetPANgateway uint16 = 0x02
+	PktPANgateway    uint16 = 0x03
+
+	PktGetTime   uint16 = 0x04
+	PktSetTime   uint16 = 0x05
+	PktTimeState uint16 = 0x06
+
+	PktGetPowerState uint16 = 0x14
+	PktSetPowerState uint16 = 0x15
+	PktPowerState    uint16 = 0x16
+
+	PktGetLightState  uint16 = 0x65
+	PktSetLightColour uint16 = 0x66
+	PktLightState     uint16 = 0x6b
+
+	PktGetTags uint16 = 0x1a
+	PktSetTags uint16 = 0x1b
+	PktTags    uint16 = 0x1c
 )
 
 type PacketHeader struct {
-	Size               uint16
-	Protocol           uint16
-	Reserved1          uint32
-	Target_mac_address [6]byte
-	Reserved2          uint16
-	Site               [6]byte
-	Reserved3          uint16
-	Timestamp          uint64
-	Packet_type        uint16
-	Reserved4          uint16
+	Size             uint16
+	Protocol         uint16
+	Reserved1        uint32
+	TargetMacAddress [6]byte
+	Reserved2        uint16
+	Site             [6]byte
+	Reserved3        uint16
+	Timestamp        uint64
+	PacketType       uint16
+	Reserved4        uint16
 }
 
 func NewPacketHeader(packetType uint16) *PacketHeader {
@@ -34,7 +50,7 @@ func NewPacketHeader(packetType uint16) *PacketHeader {
 	p.Reserved1 = 0x0000
 	p.Reserved2 = 0x00
 	p.Reserved3 = 0x00
-	p.Packet_type = packetType
+	p.PacketType = packetType
 	p.Reserved4 = 0x00
 	return p
 }
@@ -66,17 +82,7 @@ func (p *PacketHeader) Encode(wr io.Writer) (int, error) {
 	return wr.Write(buf.Bytes())
 }
 
-type PANgatewayPayload struct {
-	Service uint8
-	Port    uint16
-}
-
-func NewPANgatewayPayload(buf []byte) (*PANgatewayPayload, error) {
-	p := &PANgatewayPayload{}
+func DecodePayload(buf []byte, payload interface{}) error {
 	r := bytes.NewBuffer(buf)
-	err := binary.Read(r, binary.LittleEndian, p)
-	if err != nil {
-		return nil, err
-	}
-	return p, err
+	return binary.Read(r, binary.LittleEndian, payload)
 }
