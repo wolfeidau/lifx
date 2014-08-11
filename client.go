@@ -58,6 +58,10 @@ func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]by
 	return gw, nil
 }
 
+func (b *Bulb) GetLabel() string {
+	return string(b.lastLightState.Payload.BulbLabel[:])
+}
+
 func (g *gateway) sendTo(cmd command) error {
 
 	// send to globe
