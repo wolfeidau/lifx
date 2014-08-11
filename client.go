@@ -20,12 +20,13 @@ var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 type Bulb struct {
 	LifxAddress [6]byte // incoming messages are desimanated by lifx address
 
-	Hue        uint16
-	Saturation uint16
-	Brightness uint16
-	Kelvin     uint16
-	Dim        uint16
-	Power      uint16
+	Hue        *uint16
+	Saturation *uint16
+	Brightness *uint16
+	Kelvin     *uint16
+	Dim        *uint16
+	Power      *uint16
+	Label      *string
 
 	LastSeen time.Time
 }
@@ -34,13 +35,28 @@ func newBulb(lifxAddress [6]byte) *Bulb {
 	return &Bulb{LifxAddress: lifxAddress}
 }
 
-func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power uint16) {
-	b.Hue = hue
-	b.Saturation = saturation
-	b.Brightness = brightness
-	b.Kelvin = kelvin
-	b.Dim = dim
-	b.Power = power
+func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power *uint16, label *string) {
+	if hue != nil {
+		b.Hue = hue
+	}
+	if saturation != nil {
+		b.Saturation = saturation
+	}
+	if brightness != nil {
+		b.Brightness = brightness
+	}
+	if kelvin != nil {
+		b.Kelvin = kelvin
+	}
+	if dim != nil {
+		b.Dim = dim
+	}
+	if power != nil {
+		b.Power = power
+	}
+	if label != nil {
+		b.Label = label
+	}
 }
 
 type gateway struct {
@@ -71,10 +87,6 @@ func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]by
 	}
 
 	return gw, nil
-}
-
-func (b *Bulb) GetLabel() string {
-	return string(b.lastLightState.Payload.BulbLabel[:])
 }
 
 func (g *gateway) sendTo(cmd command) error {
@@ -189,10 +201,9 @@ func (b *Client) LightOff(bulb *Bulb) error {
 	return b.sendTo(bulb, cmd)
 }
 
-func (b *Client) LightColour(bulb *Bulb, hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error {
+func (b *Client) LightColour(bulb *Bulb, hue *uint16, sat *uint16, lum *uint16, kelvin *uint16, timing *uint32) error {
 
-	cmd := newSetLightColour(hue, sat, lum, kelvin, timing)
-
+	cmd := newSetLightColour(*hue, *sat, *lum, *kelvin, *timing)
 	return b.sendTo(bulb, cmd)
 }
 
@@ -267,7 +278,8 @@ func (c *Client) startMainEventLoop() {
 			// found a bulb
 			bulb := newBulb(cmd.Header.TargetMacAddress)
 
-			bulb.updateState(cmd.Payload.Hue, cmd.Payload.Saturation, cmd.Payload.Brightness, cmd.Payload.Kelvin, cmd.Payload.Dim, cmd.Payload.Power)
+			label := string(cmd.Payload.BulbLabel[:])
+			bulb.updateState(&cmd.Payload.Hue, &cmd.Payload.Saturation, &cmd.Payload.Brightness, &cmd.Payload.Kelvin, &cmd.Payload.Dim, &cmd.Payload.Power, &label)
 
 			c.addBulb(bulb)
 
@@ -339,7 +351,7 @@ func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
 	for _, b := range c.bulbs {
 		// this needs further investigation
 		if lifxAddress == b.LifxAddress {
-			b.Power = onoff
+			b.Power = &onoff
 		}
 	}
 }
