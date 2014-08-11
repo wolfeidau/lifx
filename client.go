@@ -19,7 +19,12 @@ var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 
 type Bulb struct {
 	LifxAddress [6]byte // incoming messages are desimanated by lifx address
+	Label       string
+	State       BulbState
+	LastSeen    time.Time
+}
 
+type BulbState struct {
 	Hue        *uint16
 	Saturation *uint16
 	Brightness *uint16
@@ -27,35 +32,34 @@ type Bulb struct {
 	Dim        *uint16
 	Power      *uint16
 	Label      *string
-
-	LastSeen time.Time
 }
 
 func newBulb(lifxAddress [6]byte) *Bulb {
 	return &Bulb{LifxAddress: lifxAddress}
 }
 
-func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power *uint16, label *string) {
+func (b *Bulb) setLabel(label string) {
+	b.Label = label
+}
+
+func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power *uint16) {
 	if hue != nil {
-		b.Hue = hue
+		b.State.Hue = hue
 	}
 	if saturation != nil {
-		b.Saturation = saturation
+		b.State.Saturation = saturation
 	}
 	if brightness != nil {
-		b.Brightness = brightness
+		b.State.Brightness = brightness
 	}
 	if kelvin != nil {
-		b.Kelvin = kelvin
+		b.State.Kelvin = kelvin
 	}
 	if dim != nil {
-		b.Dim = dim
+		b.State.Dim = dim
 	}
 	if power != nil {
-		b.Power = power
-	}
-	if label != nil {
-		b.Label = label
+		b.State.Power = power
 	}
 }
 
@@ -181,7 +185,6 @@ func (b *Client) LightsOff() error {
 }
 
 func (b *Client) LightsColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error {
-
 	cmd := newSetLightColour(hue, sat, lum, kelvin, timing)
 
 	return b.sendToAll(cmd)
@@ -201,8 +204,10 @@ func (b *Client) LightOff(bulb *Bulb) error {
 	return b.sendTo(bulb, cmd)
 }
 
-func (b *Client) LightColour(bulb *Bulb, hue *uint16, sat *uint16, lum *uint16, kelvin *uint16, timing *uint32) error {
+// func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power *uint16, label *string) {
 
+func (b *Client) LightColour(bulb *Bulb, hue *uint16, sat *uint16, lum *uint16, kelvin *uint16, timing *uint32) error {
+	bulb.updateState(hue, sat, lum, kelvin, nil, nil)
 	cmd := newSetLightColour(*hue, *sat, *lum, *kelvin, *timing)
 	return b.sendTo(bulb, cmd)
 }
@@ -279,7 +284,8 @@ func (c *Client) startMainEventLoop() {
 			bulb := newBulb(cmd.Header.TargetMacAddress)
 
 			label := string(cmd.Payload.BulbLabel[:])
-			bulb.updateState(&cmd.Payload.Hue, &cmd.Payload.Saturation, &cmd.Payload.Brightness, &cmd.Payload.Kelvin, &cmd.Payload.Dim, &cmd.Payload.Power, &label)
+			bulb.setLabel(label)
+			bulb.updateState(&cmd.Payload.Hue, &cmd.Payload.Saturation, &cmd.Payload.Brightness, &cmd.Payload.Kelvin, &cmd.Payload.Dim, &cmd.Payload.Power)
 
 			c.addBulb(bulb)
 
@@ -351,7 +357,7 @@ func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
 	for _, b := range c.bulbs {
 		// this needs further investigation
 		if lifxAddress == b.LifxAddress {
-			b.Power = &onoff
+			b.State.Power = &onoff
 		}
 	}
 }
