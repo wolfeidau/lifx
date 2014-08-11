@@ -142,7 +142,7 @@ type setLightColour struct {
 	}
 }
 
-func newSetLightColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) *setLightColour {
+func newSetLightColour(hue, sat, lum, kelvin *uint16, timing *uint32) *setLightColour {
 	ph := newPacketHeader(PktSetLightColour)
 	ph.Protocol = 13312
 	ph.Size = 49
@@ -151,11 +151,21 @@ func newSetLightColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing
 
 	cmd.Header = ph
 
-	cmd.Payload.Hue = hue
-	cmd.Payload.Saturation = sat
-	cmd.Payload.Brightness = lum
-	cmd.Payload.Kelvin = kelvin
-	cmd.Payload.Dim = timing
+	if hue != nil {
+		cmd.Payload.Hue = *hue
+	}
+	if sat != nil {
+		cmd.Payload.Saturation = *sat
+	}
+	if lum != nil {
+		cmd.Payload.Brightness = *lum
+	}
+	if kelvin != nil {
+		cmd.Payload.Kelvin = *kelvin
+	}
+	if timing != nil {
+		cmd.Payload.Dim = *timing
+	}
 
 	return cmd
 }
