@@ -26,7 +26,7 @@ func realMain() int {
 	for {
 		time.Sleep(10 * time.Second)
 
-		c.LightsOn()
+		//c.LightsOn()
 
 		// time.Sleep(10 * time.Second)
 
