@@ -85,34 +85,35 @@ type gateway struct {
 	Port        uint16
 	Site        [6]byte // incoming messages are desimanated by site
 	lastSeen    time.Time
-	socket      *net.UDPConn
 }
 
-func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]byte) (*gateway, error) {
+func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]byte) *gateway {
 
 	gw := &gateway{lifxAddress: lifxAddress, hostAddress: hostAddress, Port: port, Site: site}
 
-	// can we connect to the gw
-	addr, err := net.ResolveUDPAddr("udp4", gw.hostAddress)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// open the connection, which we retain for all peer -> globe comms
-	gw.socket, err = net.DialUDP("udp4", nil, addr)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return gw, nil
+	return gw
 }
 
 func (g *gateway) sendTo(cmd command) error {
 
+	// can we connect to the gw
+	addr, err := net.ResolveUDPAddr("udp4", g.hostAddress)
+
+	if err != nil {
+		return err
+	}
+
+	// open the connection, which we retain for all peer -> globe comms
+	socket, err := net.DialUDP("udp4", nil, addr)
+
+	if err != nil {
+		return err
+	}
+
+	defer socket.Close()
+
 	// send to globe
-	_, err := cmd.WriteTo(g.socket)
+	_, err = cmd.WriteTo(socket)
 
 	if err != nil {
 		return err
@@ -253,7 +254,7 @@ func (c *Client) sendTo(bulb *Bulb, cmd command) error {
 	for _, gw := range c.gateways {
 		//log.Printf("sending command to %s", gw.hostAddress)
 		cmd.SetSiteAddr(gw.Site) // update the site address for each gateway
-		_, err := cmd.WriteTo(gw.socket)
+		err := gw.sendTo(cmd)
 		if err != nil {
 			return err
 		}
@@ -265,7 +266,7 @@ func (c *Client) sendToAll(cmd command) error {
 	for _, gw := range c.gateways {
 		//log.Printf("sending command to %s", gw.hostAddress)
 		cmd.SetSiteAddr(gw.Site) // update the site address so all globes change
-		_, err := cmd.WriteTo(gw.socket)
+		err := gw.sendTo(cmd)
 		if err != nil {
 			return err
 		}
@@ -300,7 +301,7 @@ func (c *Client) startMainEventLoop() {
 
 			// found a gw
 			if cmd.Payload.Service == 1 {
-				gw, err := newGateway(cmd.Header.TargetMacAddress, addr.String(), cmd.Payload.Port, cmd.Header.Site)
+				gw := newGateway(cmd.Header.TargetMacAddress, addr.String(), cmd.Payload.Port, cmd.Header.Site)
 				if err != nil {
 					//log.Printf("failed to setup peer connection to gw")
 				} else {
