@@ -183,7 +183,7 @@ func (b *Client) LightsOff() error {
 	return b.sendToAll(cmd)
 }
 
-func (b *Client) LightsColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error {
+func (b *Client) LightsColour(hue, sat, lum, kelvin *uint16, timing *uint32) error {
 	cmd := newSetLightColour(hue, sat, lum, kelvin, timing)
 
 	return b.sendToAll(cmd)
@@ -207,7 +207,7 @@ func (b *Client) LightOff(bulb *Bulb) error {
 
 func (b *Client) LightColour(bulb *Bulb, hue *uint16, sat *uint16, lum *uint16, kelvin *uint16, timing *uint32) error {
 	bulb.updateState(hue, sat, lum, kelvin, nil, nil)
-	cmd := newSetLightColour(*hue, *sat, *lum, *kelvin, *timing)
+	cmd := newSetLightColour(hue, sat, lum, kelvin, timing)
 	return b.sendTo(bulb, cmd)
 }
 

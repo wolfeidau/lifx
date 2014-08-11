@@ -152,19 +152,19 @@ func newSetLightColour(hue, sat, lum, kelvin *uint16, timing *uint32) *setLightC
 	cmd.Header = ph
 
 	if hue != nil {
-		cmd.Payload.Hue = *hue
+		cmd.Payload.Hue = 0
 	}
 	if sat != nil {
-		cmd.Payload.Saturation = *sat
+		cmd.Payload.Saturation = 0
 	}
 	if lum != nil {
-		cmd.Payload.Brightness = *lum
+		cmd.Payload.Brightness = 0
 	}
 	if kelvin != nil {
 		cmd.Payload.Kelvin = *kelvin
 	}
 	if timing != nil {
-		cmd.Payload.Dim = *timing
+		cmd.Payload.Dim = 1
 	}
 
 	return cmd
