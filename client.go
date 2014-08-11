@@ -20,14 +20,14 @@ var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 type Bulb struct {
 	LifxAddress [6]byte // incoming messages are desimanated by lifx address
 
-	Hue        uint16
-	Saturation uint16
-	Brightness uint16
-	Kelvin     uint16
-	Dim        uint16
-	Power      uint16
-
-	LastSeen time.Time
+	Hue            uint16
+	Saturation     uint16
+	Brightness     uint16
+	Kelvin         uint16
+	Dim            uint16
+	Power          uint16
+	lastLightState *lightStateCommand
+	LastSeen       time.Time
 }
 
 func newBulb(lifxAddress [6]byte) *Bulb {
@@ -266,6 +266,7 @@ func (c *Client) startMainEventLoop() {
 
 			// found a bulb
 			bulb := newBulb(cmd.Header.TargetMacAddress)
+			bulb.lastLightState = cmd
 
 			bulb.updateState(cmd.Payload.Hue, cmd.Payload.Saturation, cmd.Payload.Brightness, cmd.Payload.Kelvin, cmd.Payload.Dim, cmd.Payload.Power)
 
