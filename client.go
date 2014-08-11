@@ -31,7 +31,6 @@ type BulbState struct {
 	Kelvin     *uint16
 	Dim        *uint16
 	Power      *uint16
-	Label      *string
 }
 
 func newBulb(lifxAddress [6]byte) *Bulb {
