@@ -12,8 +12,36 @@ The aim of this project is to keep things simple and just provide a very thin AP
 ## type Bulb
 ``` go
 type Bulb struct {
-	LifxAddress [6]byte
+    LifxAddress [6]byte
+
+    LastSeen time.Time
     // contains filtered or unexported fields
+}
+```
+
+### func (\*Bulb) GetLabel
+``` go
+func (b *Bulb) GetLabel() string
+```
+
+### func (\*Bulb) GetPower
+``` go
+func (b *Bulb) GetPower() uint16
+```
+
+### func (\*Bulb) GetState
+``` go
+func (b *Bulb) GetState() *BulbState
+```
+
+## type BulbState
+``` go
+type BulbState struct {
+    Hue        uint16
+    Saturation uint16
+    Brightness uint16
+    Kelvin     uint16
+    Dim        uint16
 }
 ```
 
