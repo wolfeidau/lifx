@@ -8,6 +8,16 @@ The aim of this project is to keep things simple and just provide a very thin AP
 
     import "github.com/wolfeidau/lifx"
 
+## Constants
+``` go
+const (
+    // BroadcastPort port used for broadcasting messages to lifx globes
+    BroadcastPort = 56700
+
+    // PeerPort port used for peer to peer messages to lifx globes
+    PeerPort = 56750
+)
+```
 
 ## type Bulb
 ``` go
@@ -18,21 +28,25 @@ type Bulb struct {
     // contains filtered or unexported fields
 }
 ```
+Bulb Holds the state for a lifx bulb
 
 ### func (\*Bulb) GetLabel
 ``` go
 func (b *Bulb) GetLabel() string
 ```
+GetLabel get the label from the globe
 
 ### func (\*Bulb) GetPower
 ``` go
 func (b *Bulb) GetPower() uint16
 ```
+GetPower is the globe powered on or off
 
 ### func (\*Bulb) GetState
 ``` go
 func (b *Bulb) GetState() *BulbState
 ```
+GetState get a snapshot of the state for the bulb
 
 ## type BulbState
 ``` go
@@ -44,6 +58,7 @@ type BulbState struct {
     Dim        uint16
 }
 ```
+BulbState a snapshot of the bulbs last state
 
 ## type Client
 ``` go
@@ -52,51 +67,78 @@ type Client struct {
     // contains filtered or unexported fields
 }
 ```
+Client holds all the state and connections for the lifx client.
 
 ### func NewClient
 ``` go
 func NewClient() *Client
 ```
+NewClient make a new lifx client
+
+
+
 
 ### func (\*Client) GetBulbs
 ``` go
-func (b *Client) GetBulbs() []*Bulb
+func (c *Client) GetBulbs() []*Bulb
 ```
+GetBulbs get a list of the bulbs found by the client
+
+
 
 ### func (\*Client) LightColour
 ``` go
-func (b *Client) LightColour(bulb *Bulb, hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error
+func (c *Client) LightColour(bulb *Bulb, hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error
 ```
+LightColour change the color of a bulb
+
+
 
 ### func (\*Client) LightOff
 ``` go
-func (b *Client) LightOff(bulb *Bulb) error
+func (c *Client) LightOff(bulb *Bulb) error
 ```
+LightOff turn off a bulb
+
+
 
 ### func (\*Client) LightOn
 ``` go
-func (b *Client) LightOn(bulb *Bulb) error
+func (c *Client) LightOn(bulb *Bulb) error
 ```
+LightOn turn on a bulb
+
+
 
 ### func (\*Client) LightsColour
 ``` go
-func (b *Client) LightsColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error
+func (c *Client) LightsColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error
 ```
+LightsColour changes the color of all lifx bulbs
+
+
 
 ### func (\*Client) LightsOff
 ``` go
-func (b *Client) LightsOff() error
+func (c *Client) LightsOff() error
 ```
+LightsOff turn all lifx bulbs off
+
+
 
 ### func (\*Client) LightsOn
 ``` go
-func (b *Client) LightsOn() error
+func (c *Client) LightsOn() error
 ```
+LightsOn turn all lifx bulbs on
+
+
 
 ### func (\*Client) StartDiscovery
 ``` go
 func (c *Client) StartDiscovery() (err error)
 ```
+StartDiscovery Begin searching for lifx globes on the local LAN
 
 # Disclaimer
 
