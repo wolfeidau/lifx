@@ -19,13 +19,9 @@ var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 
 type Bulb struct {
 	LifxAddress [6]byte // incoming messages are desimanated by lifx address
+	power       uint16
+	bulbState   *BulbState
 
-	Hue            uint16
-	Saturation     uint16
-	Brightness     uint16
-	Kelvin         uint16
-	Dim            uint16
-	Power          uint16
 	lastLightState *lightStateCommand
 	LastSeen       time.Time
 }
@@ -35,12 +31,39 @@ func newBulb(lifxAddress [6]byte) *Bulb {
 }
 
 func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power uint16) {
-	b.Hue = hue
-	b.Saturation = saturation
-	b.Brightness = brightness
-	b.Kelvin = kelvin
-	b.Dim = dim
-	b.Power = power
+
+	bs := NewBulbState(hue, saturation, brightness, kelvin, dim, power)
+
+	// only update if it has changed
+	if !reflect.DeepEqual(bs, b.bulbState) {
+		b.bulbState = bs
+	}
+}
+
+func (b *Bulb) GetState() *BulbState {
+	return b.bulbState
+}
+
+func (b *Bulb) GetPower() uint16 {
+	return b.power
+}
+
+type BulbState struct {
+	Hue        uint16
+	Saturation uint16
+	Brightness uint16
+	Kelvin     uint16
+	Dim        uint16
+}
+
+func NewBulbState(hue, saturation, brightness, kelvin, dim, power uint16) *BulbState {
+	return &BulbState{
+		Hue:        hue,
+		Saturation: saturation,
+		Brightness: brightness,
+		Kelvin:     kelvin,
+		Dim:        dim,
+	}
 }
 
 type gateway struct {
@@ -340,7 +363,7 @@ func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
 	for _, b := range c.bulbs {
 		// this needs further investigation
 		if lifxAddress == b.LifxAddress {
-			b.Power = onoff
+			b.power = onoff
 		}
 	}
 }
