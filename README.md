@@ -2,6 +2,8 @@
 
 Hacking on a client for the [lifx](http://lifx.co) light globe, this is based on the work already done in the [lifxjs](https://github.com/magicmonkey/lifxjs) and [go-lifx](https://github.com/bjeanes/go-lifx).
 
+The aim of this project is to keep things simple and just provide a very thin API to the lifx globes with a view to focusing on packet decoding, coordination and discovery.
+
 # Usage
 
     import "github.com/wolfeidau/lifx"
