@@ -330,7 +330,7 @@ func (c *Client) startMainEventLoop() {
 
 func (c *Client) sendDiscovery(t time.Time) {
 
-	log.Println("Discovery packet sent at", t)
+	//log.Println("Discovery packet sent at", t)
 	socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{
 		IP:   net.IPv4(255, 255, 255, 255),
 		Port: BroadcastPort,
