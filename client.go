@@ -20,12 +20,27 @@ var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 type Bulb struct {
 	LifxAddress [6]byte // incoming messages are desimanated by lifx address
 
-	lastLightState *lightStateCommand
-	lastSeen       time.Time
+	Hue        uint16
+	Saturation uint16
+	Brightness uint16
+	Kelvin     uint16
+	Dim        uint16
+	Power      uint16
+
+	LastSeen time.Time
 }
 
-func newBulb(cmd *lightStateCommand) *Bulb {
-	return &Bulb{LifxAddress: cmd.Header.TargetMacAddress, lastLightState: cmd}
+func newBulb(lifxAddress [6]byte) *Bulb {
+	return &Bulb{LifxAddress: lifxAddress}
+}
+
+func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power uint16) {
+	b.Hue = hue
+	b.Saturation = saturation
+	b.Brightness = brightness
+	b.Kelvin = kelvin
+	b.Dim = dim
+	b.Power = power
 }
 
 type gateway struct {
@@ -250,9 +265,15 @@ func (c *Client) startMainEventLoop() {
 		case *lightStateCommand:
 
 			// found a bulb
-			bulb := newBulb(cmd)
+			bulb := newBulb(cmd.Header.TargetMacAddress)
+
+			bulb.updateState(cmd.Payload.Hue, cmd.Payload.Saturation, cmd.Payload.Brightness, cmd.Payload.Kelvin, cmd.Payload.Dim, cmd.Payload.Power)
 
 			c.addBulb(bulb)
+
+		case *powerStateCommand:
+
+			c.updateBulbPowerState(cmd.Header.TargetMacAddress, cmd.Payload.OnOff)
 
 		default:
 		}
@@ -305,11 +326,20 @@ func (c *Client) addBulb(bulb *Bulb) {
 	if !bulbInSlice(bulb, c.bulbs) {
 		log.Printf("Added bulb %v", bulb)
 		c.bulbs = append(c.bulbs, bulb)
-		bulb.lastSeen = time.Now()
+		bulb.LastSeen = time.Now()
 	}
 	for _, lbulb := range c.bulbs {
 		if bulb.LifxAddress == lbulb.LifxAddress {
-			lbulb.lastSeen = time.Now()
+			lbulb.LastSeen = time.Now()
+		}
+	}
+}
+
+func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
+	for _, b := range c.bulbs {
+		// this needs further investigation
+		if lifxAddress == b.LifxAddress {
+			b.Power = onoff
 		}
 	}
 }

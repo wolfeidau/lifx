@@ -59,12 +59,12 @@ func TestSetPowerStateCommandWrite(t *testing.T) {
 
 	buf := new(bytes.Buffer)
 	addr := [6]byte{0xd0, 0x73, 0xd5, 0x00, 0x35, 0xf7}
-	site := [6]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	//	site := [6]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 
 	c := newSetPowerStateCommand(bulbOn)
 
-	c.SetLifxAddr(addr)
-	c.SetSiteAddr(site)
+	//c.SetLifxAddr(addr)
+	c.SetSiteAddr(addr)
 
 	n, err := c.WriteTo(buf)
 
@@ -99,7 +99,7 @@ func TestPowerStateCommandDecode(t *testing.T) {
 	}
 
 	switch cmd := cmd.(type) {
-	case *panGatewayCommand:
+	case *powerStateCommand:
 		if !reflect.DeepEqual(expSite, cmd.Header.Site) {
 			t.Fatalf("expected % x, got: % x", expSite, cmd.Header.Site)
 		}
