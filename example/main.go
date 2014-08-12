@@ -31,17 +31,18 @@ func realMain() int {
 		// time.Sleep(10 * time.Second)
 
 		// c.LightsOff()
+		// func (b *Client) LightColour(bulb *Bulb, hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error {
 
 		for _, bulb := range c.GetBulbs() {
 
 			log.Printf("send to bulb %v", bulb)
 
-			time.Sleep(5 * time.Second)
-			c.LightColour(bulb, 0xcc15, 0xffff, 0x1f4, 0, 0x0513)
+			time.Sleep(1 * time.Second)
+			c.LightColour(bulb, 0xcc15, 0xffff, 0x1f4, 0, 0x1f4)
 
 			// bright white
-			time.Sleep(5 * time.Second)
-			c.LightColour(bulb, 0, 0, 0x8000, 0x0af0, 0x0513)
+			time.Sleep(1 * time.Second)
+			c.LightColour(bulb, 0, 0, 0x8000, 0x0af0, 0x1f4)
 		}
 
 	}

@@ -25,7 +25,7 @@ var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 type Bulb struct {
 	LifxAddress [6]byte // incoming messages are desimanated by lifx address
 	power       uint16
-	bulbState   *BulbState
+	BulbState   *BulbState
 
 	lastLightState *lightStateCommand
 	LastSeen       time.Time
@@ -40,14 +40,14 @@ func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power uint1
 	bs := NewBulbState(hue, saturation, brightness, kelvin, dim, power)
 
 	// only update if it has changed
-	if !reflect.DeepEqual(bs, b.bulbState) {
-		b.bulbState = bs
+	if !reflect.DeepEqual(bs, b.BulbState) {
+		b.BulbState = bs
 	}
 }
 
 // GetState Get a snapshot of the state for the bulb
 func (b *Bulb) GetState() *BulbState {
-	return b.bulbState
+	return b.BulbState
 }
 
 // GetPower Is the globe powered on or off
@@ -67,6 +67,7 @@ type BulbState struct {
 	Brightness uint16
 	Kelvin     uint16
 	Dim        uint16
+	Timing     uint32
 }
 
 func NewBulbState(hue, saturation, brightness, kelvin, dim, power uint16) *BulbState {
