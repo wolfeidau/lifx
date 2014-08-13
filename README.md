@@ -75,16 +75,11 @@ func NewClient() *Client
 ```
 NewClient make a new lifx client
 
-
-
-
 ### func (\*Client) GetBulbs
 ``` go
 func (c *Client) GetBulbs() []*Bulb
 ```
 GetBulbs get a list of the bulbs found by the client
-
-
 
 ### func (\*Client) LightColour
 ``` go
@@ -92,15 +87,11 @@ func (c *Client) LightColour(bulb *Bulb, hue uint16, sat uint16, lum uint16, kel
 ```
 LightColour change the color of a bulb
 
-
-
 ### func (\*Client) LightOff
 ``` go
 func (c *Client) LightOff(bulb *Bulb) error
 ```
 LightOff turn off a bulb
-
-
 
 ### func (\*Client) LightOn
 ``` go
@@ -108,15 +99,11 @@ func (c *Client) LightOn(bulb *Bulb) error
 ```
 LightOn turn on a bulb
 
-
-
 ### func (\*Client) LightsColour
 ``` go
 func (c *Client) LightsColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error
 ```
 LightsColour changes the color of all lifx bulbs
-
-
 
 ### func (\*Client) LightsOff
 ``` go
@@ -124,15 +111,11 @@ func (c *Client) LightsOff() error
 ```
 LightsOff turn all lifx bulbs off
 
-
-
 ### func (\*Client) LightsOn
 ``` go
 func (c *Client) LightsOn() error
 ```
 LightsOn turn all lifx bulbs on
-
-
 
 ### func (\*Client) StartDiscovery
 ``` go
