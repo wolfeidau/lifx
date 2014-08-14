@@ -90,7 +90,7 @@ func (g *Gateway) GetLifxAddress() string {
 	return fmt.Sprintf("%x", g.lifxAddress)
 }
 
-// GetLifxAddress returns the unique site identifier for the gateway
+// GetSite returns the unique site identifier for the gateway
 func (g *Gateway) GetSite() string {
 	return fmt.Sprintf("%x", g.Site)
 }
