@@ -24,7 +24,6 @@ var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 // Bulb Holds the state for a lifx bulb
 type Bulb struct {
 	LifxAddress [6]byte // incoming messages are desimanated by lifx address
-	power       uint16
 	bulbState   *BulbState
 
 	lastLightState *lightStateCommand
@@ -35,24 +34,14 @@ func newBulb(lifxAddress [6]byte) *Bulb {
 	return &Bulb{LifxAddress: lifxAddress}
 }
 
-func (b *Bulb) updateState(hue, saturation, brightness, kelvin, dim, power uint16) {
-
-	bs := NewBulbState(hue, saturation, brightness, kelvin, dim, power)
-
-	// only update if it has changed
-	if !reflect.DeepEqual(bs, b.bulbState) {
-		b.bulbState = bs
-	}
-}
-
-// GetState Get a snapshot of the state for the bulb
-func (b *Bulb) GetState() *BulbState {
-	return b.bulbState
+// GetState Get a *snapshot* of the state for the bulb
+func (b *Bulb) GetState() BulbState {
+	return *b.bulbState
 }
 
 // GetPower Is the globe powered on or off
 func (b *Bulb) GetPower() uint16 {
-	return b.power
+	return b.bulbState.Power
 }
 
 // GetLabel Get the label from the globe
@@ -67,19 +56,22 @@ type BulbState struct {
 	Brightness uint16
 	Kelvin     uint16
 	Dim        uint16
+	Power      uint16
 }
 
-func NewBulbState(hue, saturation, brightness, kelvin, dim, power uint16) *BulbState {
+func newBulbState(hue, saturation, brightness, kelvin, dim, power uint16) *BulbState {
 	return &BulbState{
 		Hue:        hue,
 		Saturation: saturation,
 		Brightness: brightness,
 		Kelvin:     kelvin,
 		Dim:        dim,
+		Power:      power,
 	}
 }
 
-type gateway struct {
+// Gateway Lifx bulb which is acting as a gateway to the mesh
+type Gateway struct {
 	lifxAddress [6]byte
 	hostAddress string
 	Port        uint16
@@ -87,14 +79,14 @@ type gateway struct {
 	lastSeen    time.Time
 }
 
-func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]byte) *gateway {
+func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]byte) *Gateway {
 
-	gw := &gateway{lifxAddress: lifxAddress, hostAddress: hostAddress, Port: port, Site: site}
+	gw := &Gateway{lifxAddress: lifxAddress, hostAddress: hostAddress, Port: port, Site: site}
 
 	return gw
 }
 
-func (g *gateway) sendTo(cmd command) error {
+func (g *Gateway) sendTo(cmd command) error {
 
 	// can we connect to the gw
 	addr, err := net.ResolveUDPAddr("udp4", g.hostAddress)
@@ -124,7 +116,7 @@ func (g *gateway) sendTo(cmd command) error {
 	return nil
 }
 
-func (g *gateway) findBulbs() error {
+func (g *Gateway) findBulbs() error {
 
 	// get Light State
 	lcmd := newGetLightStateCommand(g.Site)
@@ -148,7 +140,7 @@ func (g *gateway) findBulbs() error {
 
 // Client holds all the state and connections for the lifx client.
 type Client struct {
-	gateways      []*gateway
+	gateways      []*Gateway
 	bulbs         []*Bulb
 	intervalID    int
 	DiscoInterval int
@@ -156,6 +148,8 @@ type Client struct {
 	peerSocket  net.Conn
 	bcastSocket *net.UDPConn
 	discoTicker *time.Ticker
+	in          chan interface{}
+	subs        []*Sub
 }
 
 // NewClient make a new lifx client
@@ -175,7 +169,7 @@ func (c *Client) StartDiscovery() (err error) {
 		return
 	}
 
-	c.discoTicker = time.NewTicker(time.Second * 10)
+	c.discoTicker = time.NewTicker(time.Second * 3)
 
 	// once you pop you can't stop
 	go c.startMainEventLoop()
@@ -247,6 +241,13 @@ func (c *Client) GetBulbs() []*Bulb {
 	return c.bulbs
 }
 
+// Subscribe listen for changes to bulbs or gateways, at the moment this is just sending out the raw bulb/gateway value.
+func (c *Client) Subscribe() *Sub {
+	sub := newSub()
+	c.subs = append(c.subs, sub)
+	return sub
+}
+
 func (c *Client) sendTo(bulb *Bulb, cmd command) error {
 
 	cmd.SetLifxAddr(bulb.LifxAddress) // ensure the message is addressed to the correct bulb
@@ -315,7 +316,7 @@ func (c *Client) startMainEventLoop() {
 			bulb := newBulb(cmd.Header.TargetMacAddress)
 			bulb.lastLightState = cmd
 
-			bulb.updateState(cmd.Payload.Hue, cmd.Payload.Saturation, cmd.Payload.Brightness, cmd.Payload.Kelvin, cmd.Payload.Dim, cmd.Payload.Power)
+			bulb.bulbState = newBulbState(cmd.Payload.Hue, cmd.Payload.Saturation, cmd.Payload.Brightness, cmd.Payload.Kelvin, cmd.Payload.Dim, cmd.Payload.Power)
 
 			c.addBulb(bulb)
 
@@ -324,6 +325,7 @@ func (c *Client) startMainEventLoop() {
 			c.updateBulbPowerState(cmd.Header.TargetMacAddress, cmd.Payload.OnOff)
 
 		default:
+			// log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
 		}
 
 	}
@@ -353,11 +355,15 @@ func (c *Client) sendDiscovery(t time.Time) {
 
 }
 
-func (c *Client) addGateway(gw *gateway) {
+func (c *Client) addGateway(gw *Gateway) {
 	if !gatewayInSlice(gw, c.gateways) {
 		//log.Printf("Added gw %v", gw)
 		gw.lastSeen = time.Now()
 		c.gateways = append(c.gateways, gw)
+
+		// notify subscribers
+		go c.notifySubsGwNew(*gw)
+
 	} else {
 		for _, lgw := range c.gateways {
 			if gw.lifxAddress == lgw.lifxAddress && gw.Port == lgw.Port && gw.hostAddress == lgw.hostAddress {
@@ -372,13 +378,29 @@ func (c *Client) addGateway(gw *gateway) {
 
 func (c *Client) addBulb(bulb *Bulb) {
 	if !bulbInSlice(bulb, c.bulbs) {
-		//log.Printf("Added bulb %v", bulb)
-		c.bulbs = append(c.bulbs, bulb)
 		bulb.LastSeen = time.Now()
+		c.bulbs = append(c.bulbs, bulb)
+
+		// log.Printf("Added bulb %x state %v", bulb.LifxAddress, bulb.bulbState)
+
+		// notify subscribers
+		go c.notifySubsBulbNew(*bulb)
 	}
 	for _, lbulb := range c.bulbs {
 		if bulb.LifxAddress == lbulb.LifxAddress {
-			lbulb.LastSeen = time.Now()
+
+			if !reflect.DeepEqual(lbulb.bulbState, bulb.bulbState) {
+
+				// log.Printf("Updated bulb %v", lbulb)
+				lbulb.LastSeen = time.Now()
+
+				// update the state
+				lbulb.bulbState = bulb.bulbState
+
+				// notify subscribers
+				c.notifySubsBulbNew(*lbulb)
+			}
+
 		}
 	}
 }
@@ -387,12 +409,42 @@ func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
 	for _, b := range c.bulbs {
 		// this needs further investigation
 		if lifxAddress == b.LifxAddress {
-			b.power = onoff
+			b.bulbState.Power = onoff
+			// log.Printf("Updated bulb %v", b)
+
+			// notify subscribers
+			go c.notifySubsBulbNew(*b)
 		}
 	}
 }
 
-func gatewayInSlice(a *gateway, list []*gateway) bool {
+func (c *Client) notifySubsGwNew(gw Gateway) {
+	for _, sub := range c.subs {
+		// check if it is open
+		sub.Events <- gw
+	}
+}
+
+// dereference bulb and pass it to the subscriber via the out channel
+func (c *Client) notifySubsBulbNew(bulb Bulb) {
+	for _, sub := range c.subs {
+		// check if it is open
+		sub.Events <- bulb
+	}
+}
+
+// Sub subscription of changes
+type Sub struct {
+	Events chan interface{}
+}
+
+func newSub() *Sub {
+	sub := &Sub{}
+	sub.Events = make(chan interface{}, 1)
+	return sub
+}
+
+func gatewayInSlice(a *Gateway, list []*Gateway) bool {
 	for _, b := range list {
 		// this needs further investigation
 		if a.lifxAddress == b.lifxAddress && a.Port == b.Port && a.hostAddress == b.hostAddress {

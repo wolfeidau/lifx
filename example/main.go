@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"os/signal"
 	"time"
 
 	"github.com/wolfeidau/lifx"
@@ -23,35 +21,50 @@ func realMain() int {
 		log.Fatalf("Woops %s", err)
 	}
 
+	go func() {
+		log.Printf("Subscribing to changes")
+
+		sub := c.Subscribe()
+		for {
+			event := <-sub.Events
+
+			switch event := event.(type) {
+			case lifx.Gateway:
+				log.Printf("Gateway Update %v", event)
+			case lifx.Bulb:
+				log.Printf("Bulb Update %v", event.GetState())
+			default:
+				log.Printf("Event %v", event)
+			}
+
+		}
+	}()
+
+	log.Printf("Looping")
+
 	for {
 		time.Sleep(10 * time.Second)
 
-		//c.LightsOn()
+		log.Printf("LightsOn")
+		c.LightsOn()
 
-		// time.Sleep(10 * time.Second)
-
-		// c.LightsOff()
+		time.Sleep(10 * time.Second)
 
 		for _, bulb := range c.GetBulbs() {
 
-			log.Printf("send to bulb %v", bulb)
-
 			time.Sleep(5 * time.Second)
+
+			log.Printf("purple %v", bulb.LifxAddress)
 			c.LightColour(bulb, 0xcc15, 0xffff, 0x1f4, 0, 0x0513)
 
-			// bright white
 			time.Sleep(5 * time.Second)
+
+			// bright white
+			log.Printf("white %v", bulb.LifxAddress)
 			c.LightColour(bulb, 0, 0, 0x8000, 0x0af0, 0x0513)
 		}
 
 	}
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, os.Kill)
-
-	// Block until a signal is received.
-	s := <-sigChan
-	fmt.Println("Got signal:", s)
 
 	return 0
 }

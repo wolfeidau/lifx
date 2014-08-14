@@ -1,12 +1,72 @@
 # lifx 
 
-Hacking on a client for the [lifx](http://lifx.co) light globe, this is based on the work already done in the [lifxjs](https://github.com/magicmonkey/lifxjs) and [go-lifx](https://github.com/bjeanes/go-lifx).
+Hacking on a client for the [lifx](http://lifx.co) light bulb, this is based on the work already done in the [lifxjs](https://github.com/magicmonkey/lifxjs) and [go-lifx](https://github.com/bjeanes/go-lifx).
 
-The aim of this project is to keep things simple and just provide a very thin API to the lifx globes with a view to focusing on packet decoding, coordination and discovery.
+The aim of this project is to keep things simple and just provide a very thin API to the lifx bulbs with a view to focusing on packet decoding, coordination and discovery.
 
 # Usage
 
-    import "github.com/wolfeidau/lifx"
+Below is a simple example illustrating how to observe discovery and changes, as well as control of bulbs.
+
+``` go
+package main
+
+import (
+    "log"
+    "os"
+    "time"
+
+    "github.com/wolfeidau/lifx"
+)
+
+func main() {
+    c := lifx.NewClient()
+
+    err := c.StartDiscovery()
+
+    if err != nil {
+        log.Fatalf("Woops %s", err)
+    }
+
+    go func() {
+
+        sub := c.Subscribe()
+
+        for {
+            event := <-sub.Events
+
+            switch event := event.(type) {
+            case lifx.Gateway:
+                log.Printf("Gateway Update %v", event)
+            case lifx.Bulb:
+                log.Printf("Bulb Update %v", event.GetState())
+            default:
+                log.Printf("Event %v", event)
+            }
+
+        }
+    }()
+
+    log.Printf("LightsOn")
+    c.LightsOn()
+
+    time.Sleep(10 * time.Second)
+
+    for _, bulb := range c.GetBulbs() {
+
+        time.Sleep(5 * time.Second)
+
+        // transition to a dull purple
+        c.LightColour(bulb, 0xcc15, 0xffff, 0x1f4, 0, 0x0513)
+
+        time.Sleep(5 * time.Second)
+
+        // transition to a bright white
+        c.LightColour(bulb, 0, 0, 0x8000, 0x0af0, 0x0513)
+    }
+
+}
+```
 
 ## Constants
 ``` go
@@ -122,6 +182,30 @@ LightsOn turn all lifx bulbs on
 func (c *Client) StartDiscovery() (err error)
 ```
 StartDiscovery Begin searching for lifx globes on the local LAN
+
+### func (\*Client) Subscribe
+``` go
+func (c *Client) Subscribe() *Sub
+```
+Subscribe listen for changes to bulbs or gateways
+
+## type Gateway
+``` go
+type Gateway struct {
+    Port uint16
+    Site [6]byte // incoming messages are desimanated by site
+    // contains filtered or unexported fields
+}
+```
+Gateway Lifx bulb which is acting as a gateway to the mesh
+
+## type Sub
+``` go
+type Sub struct {
+    Events chan interface{}
+}
+```
+Sub subscription of changes
 
 # Disclaimer
 
