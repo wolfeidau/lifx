@@ -6,8 +6,6 @@ import (
 	"net"
 	"reflect"
 	"time"
-
-	"github.com/juju/loggo"
 )
 
 const (
@@ -20,12 +18,6 @@ const (
 	bulbOff uint16 = 0
 	bulbOn  uint16 = 1
 )
-
-var logger = loggo.GetLogger("")
-
-func init() {
-	logger.SetLogLevel(loggo.DEBUG)
-}
 
 var emptyAddr = [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 
@@ -249,7 +241,7 @@ func (c *Client) GetBulbs() []*Bulb {
 	return c.bulbs
 }
 
-// Subscribe listen for changes to bulbs or gateways
+// Subscribe listen for changes to bulbs or gateways, at the moment this is just sending out the raw bulb/gateway value.
 func (c *Client) Subscribe() *Sub {
 	sub := newSub()
 	c.subs = append(c.subs, sub)
@@ -303,7 +295,7 @@ func (c *Client) startMainEventLoop() {
 			//log.Printf("Error processing command: %v", err)
 			continue
 		}
-		//logger.Infof("Recieved command: %s", reflect.TypeOf(cmd))
+		//log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
 
 		switch cmd := cmd.(type) {
 		case *panGatewayCommand:
@@ -320,9 +312,6 @@ func (c *Client) startMainEventLoop() {
 
 		case *lightStateCommand:
 
-			//logger.Infof("payload", spew.Sdump(cmd.Payload))
-			//logger.Infof("bulb %x power %d", cmd.Header.TargetMacAddress, cmd.Payload.Power)
-
 			// found a bulb
 			bulb := newBulb(cmd.Header.TargetMacAddress)
 			bulb.lastLightState = cmd
@@ -336,7 +325,7 @@ func (c *Client) startMainEventLoop() {
 			c.updateBulbPowerState(cmd.Header.TargetMacAddress, cmd.Payload.OnOff)
 
 		default:
-			// logger.Infof("Recieved command: %s", reflect.TypeOf(cmd))
+			// log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
 		}
 
 	}
@@ -392,7 +381,7 @@ func (c *Client) addBulb(bulb *Bulb) {
 		bulb.LastSeen = time.Now()
 		c.bulbs = append(c.bulbs, bulb)
 
-		logger.Infof("Added bulb %x state %v", bulb.LifxAddress, bulb.bulbState)
+		// log.Printf("Added bulb %x state %v", bulb.LifxAddress, bulb.bulbState)
 
 		// notify subscribers
 		go c.notifySubsBulbNew(*bulb)
@@ -402,7 +391,7 @@ func (c *Client) addBulb(bulb *Bulb) {
 
 			if !reflect.DeepEqual(lbulb.bulbState, bulb.bulbState) {
 
-				logger.Infof("Updated bulb %v", lbulb)
+				// log.Printf("Updated bulb %v", lbulb)
 				lbulb.LastSeen = time.Now()
 
 				// update the state
@@ -421,7 +410,7 @@ func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
 		// this needs further investigation
 		if lifxAddress == b.LifxAddress {
 			b.bulbState.Power = onoff
-			logger.Infof("Updated bulb %v", b)
+			// log.Printf("Updated bulb %v", b)
 
 			// notify subscribers
 			go c.notifySubsBulbNew(*b)
