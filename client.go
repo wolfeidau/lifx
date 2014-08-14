@@ -2,6 +2,7 @@ package lifx
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net"
 	"reflect"
@@ -37,6 +38,11 @@ func newBulb(lifxAddress [6]byte) *Bulb {
 // GetState Get a *snapshot* of the state for the bulb
 func (b *Bulb) GetState() BulbState {
 	return *b.bulbState
+}
+
+// GetLifxAddress returns the unique lifx bulb address
+func (b *Bulb) GetLifxAddress() string {
+	return fmt.Sprintf("%x", b.LifxAddress)
 }
 
 // GetPower Is the globe powered on or off
@@ -77,6 +83,16 @@ type Gateway struct {
 	Port        uint16
 	Site        [6]byte // incoming messages are desimanated by site
 	lastSeen    time.Time
+}
+
+// GetLifxAddress returns the unique lifx address of the gateway
+func (g *Gateway) GetLifxAddress() string {
+	return fmt.Sprintf("%x", g.lifxAddress)
+}
+
+// GetLifxAddress returns the unique site identifier for the gateway
+func (g *Gateway) GetSite() string {
+	return fmt.Sprintf("%x", g.Site)
 }
 
 func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]byte) *Gateway {
