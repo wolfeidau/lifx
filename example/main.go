@@ -12,6 +12,12 @@ func main() {
 	os.Exit(realMain())
 }
 
+func buildHandler(lifxAddress string) lifx.StateHandler {
+	return func(newState *lifx.BulbState) {
+		log.Printf("changing state %++v", newState)
+	}
+}
+
 func realMain() int {
 	c := lifx.NewClient()
 
@@ -29,10 +35,11 @@ func realMain() int {
 			event := <-sub.Events
 
 			switch event := event.(type) {
-			case lifx.Gateway:
-				log.Printf("Gateway Update %v", event)
-			case lifx.Bulb:
-				log.Printf("Bulb Update %v", event.GetState())
+			case *lifx.Gateway:
+				log.Printf("Gateway Update %s", event.GetLifxAddress())
+			case *lifx.Bulb:
+				log.Printf("Bulb Update %s", event.GetLifxAddress())
+				event.SetStateHandler(buildHandler(event.GetLifxAddress()))
 			default:
 				log.Printf("Event %v", event)
 			}

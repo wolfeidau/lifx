@@ -36,9 +36,9 @@ func main() {
             event := <-sub.Events
 
             switch event := event.(type) {
-            case lifx.Gateway:
+            case *lifx.Gateway:
                 log.Printf("Gateway Update %v", event)
-            case lifx.Bulb:
+            case *  lifx.Bulb:
                 log.Printf("Bulb Update %v", event.GetState())
             default:
                 log.Printf("Event %v", event)
@@ -107,6 +107,12 @@ GetPower is the globe powered on or off
 func (b *Bulb) GetState() *BulbState
 ```
 GetState get a snapshot of the state for the bulb
+
+### func (\*Bulb) SetStateHandler
+``` go
+func (b *Bulb) SetStateHandler(handler StateHandler)
+```
+SetStateHandler add a handler which is invoked each time a state change comes through
 
 ## type BulbState
 ``` go
@@ -187,7 +193,7 @@ StartDiscovery Begin searching for lifx globes on the local LAN
 ``` go
 func (c *Client) Subscribe() *Sub
 ```
-Subscribe listen for changes to bulbs or gateways
+// Subscribe listen for new bulbs or gateways, note this is a pointer to the actual value.
 
 ## type Gateway
 ``` go
@@ -206,6 +212,12 @@ type Sub struct {
 }
 ```
 Sub subscription of changes
+
+## type StateHandler
+``` go
+type StateHandler func(newState *BulbState)
+```
+StateHandler this is called when there is a change in the state of a bulb
 
 # Disclaimer
 
