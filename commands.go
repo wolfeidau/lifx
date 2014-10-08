@@ -101,6 +101,16 @@ func newGetLightStateCommand(site [6]byte) *getLightStateCommand {
 	return cmd
 }
 
+func newGetLightStateCommandFromBulb(lifxAddress [6]byte) *getLightStateCommand {
+	ph := newPacketHeader(PktGetLightState)
+	ph.Protocol = 13312
+	ph.TargetMacAddress = lifxAddress
+
+	cmd := &getLightStateCommand{}
+	cmd.Header = ph
+	return cmd
+}
+
 // LightStateCommand 0x6b
 type lightStateCommand struct {
 	commandPacket

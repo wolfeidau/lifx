@@ -41,7 +41,7 @@ func realMain() int {
 				log.Printf("Bulb Update %s", event.GetLifxAddress())
 				event.SetStateHandler(buildHandler(event.GetLifxAddress()))
 			default:
-				log.Printf("Event %v", event)
+				log.Printf("Event %+v", event)
 			}
 
 		}
@@ -50,26 +50,43 @@ func realMain() int {
 	log.Printf("Looping")
 
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 
 		log.Printf("LightsOn")
 		c.LightsOn()
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 
 		for _, bulb := range c.GetBulbs() {
 
 			time.Sleep(5 * time.Second)
 
-			log.Printf("purple %v", bulb.LifxAddress)
+			log.Printf("purple %s", bulb.GetLifxAddress())
 			c.LightColour(bulb, 0xcc15, 0xffff, 0x1f4, 0, 0x0513)
+			time.Sleep(200 * time.Millisecond)
+			c.GetBulbState(bulb)
 
 			time.Sleep(5 * time.Second)
 
 			// bright white
-			log.Printf("white %v", bulb.LifxAddress)
-			c.LightColour(bulb, 0, 0, 0x8000, 0x0af0, 0x0513)
+
+			temps := []int{0, 1000, 2000, 3000, 4000, 5000, 6000}
+
+			for _, val := range temps {
+				time.Sleep(5 * time.Second)
+				log.Printf("white %s %d", bulb.GetLifxAddress(), val)
+
+				c.LightColour(bulb, 0, 0, 0x8000, uint16(val), 0x0513)
+				time.Sleep(200 * time.Millisecond)
+				c.GetBulbState(bulb)
+			}
+
 		}
+
+		time.Sleep(5 * time.Second)
+
+		log.Printf("LightsOff")
+		c.LightsOff()
 
 	}
 

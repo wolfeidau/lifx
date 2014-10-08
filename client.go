@@ -285,6 +285,13 @@ func (c *Client) GetBulbs() []*Bulb {
 	return c.bulbs
 }
 
+// GetBulbState send a notification to the bulb to emit it's current state
+func (c *Client) GetBulbState(bulb *Bulb) error {
+	log.Printf("GetBulbState sent to %s", bulb.GetLifxAddress())
+	cmd := newGetLightStateCommandFromBulb(bulb.LifxAddress)
+	return c.sendTo(bulb, cmd)
+}
+
 // Subscribe listen for new bulbs or gateways, note this is a pointer to the actual value.
 func (c *Client) Subscribe() *Sub {
 	sub := newSub()
