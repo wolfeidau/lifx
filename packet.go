@@ -25,6 +25,9 @@ const (
 	PktSetLightColour uint16 = 0x0066
 	PktLightState     uint16 = 0x006b
 
+	PktGetAmbientLight   uint16 = 0x0191
+	PktAmbientLightState uint16 = 0x0192
+
 	PktGetTags uint16 = 0x001a
 	PktSetTags uint16 = 0x001b
 	PktTags    uint16 = 0x001c

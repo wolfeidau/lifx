@@ -103,7 +103,9 @@ packetNames = {
 	[0x012f]   = "Wifi state",
 	[0x0130]   = "Get access points",
 	[0x0131]   = "Set access point",
-	[0x0132]   = "Access point"
+	[0x0132]   = "Access point",
+	[0x0191]   = "Get Ambient Light state",
+	[0x0192]   = "Ambient Light state"
 }
 
 function panGatewayState(buffer, pinfo, tree)
@@ -313,6 +315,10 @@ function accessPoint(buffer, pinfo, tree)
 	tree:add(F.channel,          buffer(36, 2))
 end
 
+function ambientLightState(buffer, pinfo, tree)
+	tree:add(F.lux       , buffer(0, 4))
+end
+
 packetTable = switch {
 	[0x0002] = getPanGateway,
 	[0x0003] = panGatewayState,
@@ -364,7 +370,9 @@ packetTable = switch {
 	[0x012f] = wifiState,
 	[0x0130] = getAccessPoints,
 	[0x0131] = setAccessPoint,
-	[0x0132] = accessPoint
+	[0x0132] = accessPoint,
+	[0x0191] = getAmbientLightState,
+	[0x0192] = ambientLightState
 }
 
 F.size             = ProtoField.uint16("lifx.size"           , "Packet size"          , base.DEC)
@@ -422,6 +430,8 @@ F.strength         = ProtoField.uint8("lifx.strength"        , "Strength"       
 F.channel          = ProtoField.uint8("lifx.channel"         , "Channel"              , base.DEC)
 F.service          = ProtoField.uint8("lifx.service"         , "Service"              , base.HEX , serviceStrings)
 F.port             = ProtoField.uint32("lifx.port"           , "Port"                 , base.DEC)
+F.lux              = ProtoField.float("lifx.lux"             , "Lux"                  , base.HEX)
+
 
 function lifx.dissector(buffer, pinfo, tree)
 	analyse(buffer, pinfo, tree)

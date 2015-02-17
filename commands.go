@@ -28,6 +28,8 @@ func decodeCommand(buf []byte) (command, error) {
 		return decodePANGatewayCommand(ph, buf[HeaderLen:])
 	case PktLightState:
 		return decodeLightStateCommand(ph, buf[HeaderLen:])
+	case PktAmbientLightState:
+		return decodeAmbientStateCommand(ph, buf[HeaderLen:])
 	case PktPowerState:
 		return decodePowerStateCommand(ph, buf[HeaderLen:])
 	case PktTags:
@@ -128,6 +130,52 @@ type lightStateCommand struct {
 
 func decodeLightStateCommand(ph *packetHeader, payload []byte) (*lightStateCommand, error) {
 	cmd := &lightStateCommand{}
+	cmd.Header = ph
+
+	// decode payload
+	//log.Printf("payload len : %d", len(payload))
+	decodePayload(payload, &cmd.Payload)
+
+	//log.Printf("Command: \n %s", spew.Sdump(cmd))
+
+	return cmd, nil
+}
+
+// GetAmbientLightCommand 0x65
+type getAmbientLightCommand struct {
+	commandPacket
+}
+
+func newGetAmbientLightCommand(site [6]byte) *getAmbientLightCommand {
+	ph := newPacketHeader(PktGetAmbientLight)
+	ph.Protocol = 0x1400
+	ph.Site = site
+
+	cmd := &getAmbientLightCommand{}
+	cmd.Header = ph
+	return cmd
+}
+
+func newGetAmbientLightCommandFromBulb(lifxAddress [6]byte) *getAmbientLightCommand {
+	ph := newPacketHeader(PktGetAmbientLight)
+	ph.Protocol = 0x1400
+	ph.TargetMacAddress = lifxAddress
+
+	cmd := &getAmbientLightCommand{}
+	cmd.Header = ph
+	return cmd
+}
+
+// ambientStateCommand 0x6b
+type ambientStateCommand struct {
+	commandPacket
+	Payload struct {
+		Lux float32
+	}
+}
+
+func decodeAmbientStateCommand(ph *packetHeader, payload []byte) (*ambientStateCommand, error) {
+	cmd := &ambientStateCommand{}
 	cmd.Header = ph
 
 	// decode payload

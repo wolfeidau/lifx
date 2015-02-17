@@ -27,9 +27,10 @@ type StateHandler func(newState *BulbState)
 
 // Bulb Holds the state for a lifx bulb
 type Bulb struct {
-	LifxAddress  [6]byte // incoming messages are desimanated by lifx address
-	bulbState    *BulbState
-	stateHandler StateHandler
+	LifxAddress      [6]byte // incoming messages are desimanated by lifx address
+	bulbState        *BulbState
+	lightSensorState *LightSensorState
+	stateHandler     StateHandler
 
 	lastLightState *lightStateCommand
 	LastSeen       time.Time
@@ -102,6 +103,11 @@ func newBulbState(hue, saturation, brightness, kelvin, dim, power uint16) *BulbS
 		Dim:        dim,
 		Power:      power,
 	}
+}
+
+// LightSensorState a snapshot of the bulbs ambient light sensor read
+type LightSensorState struct {
+	Lux float32
 }
 
 // Gateway Lifx bulb which is acting as a gateway to the mesh
@@ -292,6 +298,13 @@ func (c *Client) GetBulbState(bulb *Bulb) error {
 	return c.sendTo(bulb, cmd)
 }
 
+// GetAmbientLight send a notification to the bulb to emit the current ambient light
+func (c *Client) GetAmbientLight(bulb *Bulb) error {
+	log.Printf("GetAmbientLight sent to %s", bulb.GetLifxAddress())
+	cmd := newGetAmbientLightCommandFromBulb(bulb.LifxAddress)
+	return c.sendTo(bulb, cmd)
+}
+
 // Subscribe listen for new bulbs or gateways, note this is a pointer to the actual value.
 func (c *Client) Subscribe() *Sub {
 	sub := newSub()
@@ -375,8 +388,13 @@ func (c *Client) startMainEventLoop() {
 
 			c.updateBulbPowerState(cmd.Header.TargetMacAddress, cmd.Payload.OnOff)
 
+		case *ambientStateCommand:
+			//log.Printf("Recieved lux: %f", cmd.Payload.Lux)
+
+			c.updateAmbientLightState(cmd.Header.TargetMacAddress, cmd.Payload.Lux)
+
 		default:
-			// log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
+			//log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
 		}
 
 	}
@@ -450,6 +468,18 @@ func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
 		if lifxAddress == b.LifxAddress {
 			b.bulbState.Power = onoff
 			// log.Printf("Updated bulb %v", b)
+
+			// notify subscribers
+			go c.notifySubsBulbNew(b)
+		}
+	}
+}
+
+func (c *Client) updateAmbientLightState(lifxAddress [6]byte, lux float32) {
+	for _, b := range c.bulbs {
+		// this needs further investigation
+		if lifxAddress == b.LifxAddress {
+			b.lightSensorState = &LightSensorState{lux}
 
 			// notify subscribers
 			go c.notifySubsBulbNew(b)

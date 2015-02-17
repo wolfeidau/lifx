@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/wolfeidau/lifx"
 )
 
@@ -39,6 +40,7 @@ func realMain() int {
 				log.Printf("Gateway Update %s", event.GetLifxAddress())
 			case *lifx.Bulb:
 				log.Printf("Bulb Update %s", event.GetLifxAddress())
+				log.Printf(spew.Sprintf("%+v", event))
 				event.SetStateHandler(buildHandler(event.GetLifxAddress()))
 			default:
 				log.Printf("Event %+v", event)
@@ -65,6 +67,7 @@ func realMain() int {
 			c.LightColour(bulb, 0xcc15, 0xffff, 0x1f4, 0, 0x0513)
 			time.Sleep(200 * time.Millisecond)
 			c.GetBulbState(bulb)
+			c.GetAmbientLight(bulb)
 
 			time.Sleep(5 * time.Second)
 
@@ -79,6 +82,8 @@ func realMain() int {
 				c.LightColour(bulb, 0, 0, 0x8000, uint16(val), 0x0513)
 				time.Sleep(200 * time.Millisecond)
 				c.GetBulbState(bulb)
+				c.GetAmbientLight(bulb)
+
 			}
 
 		}
@@ -87,7 +92,6 @@ func realMain() int {
 
 		log.Printf("LightsOff")
 		c.LightsOff()
-
 	}
 
 	return 0
