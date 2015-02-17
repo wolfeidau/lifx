@@ -10,24 +10,24 @@ import (
 const (
 	HeaderLen = 36
 
-	PktGetPANgateway uint16 = 0x02
-	PktPANgateway    uint16 = 0x03
+	PktGetPANgateway uint16 = 0x0002
+	PktPANgateway    uint16 = 0x0003
 
-	PktGetTime   uint16 = 0x04
-	PktSetTime   uint16 = 0x05
-	PktTimeState uint16 = 0x06
+	PktGetTime   uint16 = 0x0004
+	PktSetTime   uint16 = 0x0005
+	PktTimeState uint16 = 0x0006
 
-	PktGetPowerState uint16 = 0x14
-	PktSetPowerState uint16 = 0x15
-	PktPowerState    uint16 = 0x16
+	PktGetPowerState uint16 = 0x0014
+	PktSetPowerState uint16 = 0x0015
+	PktPowerState    uint16 = 0x0016
 
-	PktGetLightState  uint16 = 0x65
-	PktSetLightColour uint16 = 0x66
-	PktLightState     uint16 = 0x6b
+	PktGetLightState  uint16 = 0x0065
+	PktSetLightColour uint16 = 0x0066
+	PktLightState     uint16 = 0x006b
 
-	PktGetTags uint16 = 0x1a
-	PktSetTags uint16 = 0x1b
-	PktTags    uint16 = 0x1c
+	PktGetTags uint16 = 0x001a
+	PktSetTags uint16 = 0x001b
+	PktTags    uint16 = 0x001c
 )
 
 type packetHeader struct {
@@ -46,7 +46,7 @@ type packetHeader struct {
 func newPacketHeader(packetType uint16) *packetHeader {
 	p := &packetHeader{}
 	p.Size = 36
-	p.Protocol = 21504
+	p.Protocol = 0x3400
 	p.Reserved1 = 0x0000
 	p.Reserved2 = 0x00
 	p.Reserved3 = 0x00

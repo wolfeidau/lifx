@@ -93,7 +93,7 @@ type getLightStateCommand struct {
 
 func newGetLightStateCommand(site [6]byte) *getLightStateCommand {
 	ph := newPacketHeader(PktGetLightState)
-	ph.Protocol = 13312
+	ph.Protocol = 0x1400
 	ph.Site = site
 
 	cmd := &getLightStateCommand{}
@@ -103,7 +103,7 @@ func newGetLightStateCommand(site [6]byte) *getLightStateCommand {
 
 func newGetLightStateCommandFromBulb(lifxAddress [6]byte) *getLightStateCommand {
 	ph := newPacketHeader(PktGetLightState)
-	ph.Protocol = 13312
+	ph.Protocol = 0x1400
 	ph.TargetMacAddress = lifxAddress
 
 	cmd := &getLightStateCommand{}
@@ -154,7 +154,7 @@ type setLightColour struct {
 
 func newSetLightColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) *setLightColour {
 	ph := newPacketHeader(PktSetLightColour)
-	ph.Protocol = 13312
+	ph.Protocol = 0x1400
 	ph.Size = 49
 
 	cmd := &setLightColour{}
@@ -190,7 +190,7 @@ type getPowerStateCommand struct {
 
 func newGetPowerStateCommand(site [6]byte, lifxAddress [6]byte) *getPowerStateCommand {
 	ph := newPacketHeader(PktGetPowerState)
-	ph.Protocol = 13312
+	ph.Protocol = 0x1400
 	ph.Site = site
 	ph.TargetMacAddress = lifxAddress
 
@@ -211,7 +211,7 @@ func newSetPowerStateCommand(onoff uint16) *setPowerStateCommand {
 	ph := newPacketHeader(PktSetPowerState)
 
 	ph.Size = 38
-	ph.Protocol = 13312
+	ph.Protocol = 0x1400
 
 	cmd := &setPowerStateCommand{}
 	cmd.Header = ph
@@ -257,7 +257,7 @@ type getTagsCommand struct {
 
 func newGetTagsCommand(site [6]byte) *getTagsCommand {
 	ph := newPacketHeader(PktGetTags)
-	ph.Protocol = 13312
+	ph.Protocol = 0x1400
 	ph.Site = site
 	cmd := &getTagsCommand{}
 	cmd.Header = ph
