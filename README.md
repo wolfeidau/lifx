@@ -219,6 +219,21 @@ type StateHandler func(newState *BulbState)
 ```
 StateHandler this is called when there is a change in the state of a bulb
 
+# Releases
+
+For Lifx firmware releases before 2.x use this version.
+
+```
+go get gopkg.in/wolfeidau/lifx.v0
+```
+
+For Lifx firmware releases 2.x use this version.
+
+```
+go get gopkg.in/wolfeidau/lifx.v1
+```
+
+
 # Disclaimer
 
 This is currently very early release, everything can and will change.
