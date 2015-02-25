@@ -68,8 +68,11 @@ func (b *Bulb) SetStateHandler(handler StateHandler) {
 func (b *Bulb) update(bulb *Bulb) bool {
 	if !reflect.DeepEqual(b.bulbState, bulb.bulbState) {
 
-		// log.Printf("Updated bulb %v", lbulb)
-		b.lastSeen = time.Now()
+		// TODO need to refactor this out as i don't think this is ideal.
+		if b.bulbState.Visible {
+			// log.Printf("Updated bulb %v", lbulb)
+			b.lastSeen = time.Now()
+		}
 
 		// update the state
 		b.bulbState = bulb.bulbState
@@ -446,7 +449,7 @@ func (c *Client) checkExpired() {
 			if bulb.GetState().Visible {
 				log.Printf("notifying bulb %s offline", bulb.GetLifxAddress())
 				bulb.bulbState.Visible = false
-				c.notifySubsBulbNew(bulb)
+				bulb.update(bulb)
 			}
 		}
 	}
