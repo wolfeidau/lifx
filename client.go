@@ -27,13 +27,12 @@ type StateHandler func(newState *BulbState)
 
 // Bulb Holds the state for a lifx bulb
 type Bulb struct {
-	LifxAddress      [6]byte // incoming messages are desimanated by lifx address
-	bulbState        *BulbState
-	lightSensorState *LightSensorState
-	stateHandler     StateHandler
+	LifxAddress  [6]byte // incoming messages are desimanated by lifx address
+	bulbState    *BulbState
+	stateHandler StateHandler
 
 	lastLightState *lightStateCommand
-	LastSeen       time.Time
+	lastSeen       time.Time
 }
 
 func newBulb(lifxAddress [6]byte) *Bulb {
@@ -70,7 +69,7 @@ func (b *Bulb) update(bulb *Bulb) bool {
 	if !reflect.DeepEqual(b.bulbState, bulb.bulbState) {
 
 		// log.Printf("Updated bulb %v", lbulb)
-		b.LastSeen = time.Now()
+		b.lastSeen = time.Now()
 
 		// update the state
 		b.bulbState = bulb.bulbState
@@ -92,9 +91,10 @@ type BulbState struct {
 	Kelvin     uint16
 	Dim        uint16
 	Power      uint16
+	Visible    bool
 }
 
-func newBulbState(hue, saturation, brightness, kelvin, dim, power uint16) *BulbState {
+func newBulbState(hue, saturation, brightness, kelvin, dim, power uint16, visible bool) *BulbState {
 	return &BulbState{
 		Hue:        hue,
 		Saturation: saturation,
@@ -102,12 +102,19 @@ func newBulbState(hue, saturation, brightness, kelvin, dim, power uint16) *BulbS
 		Kelvin:     kelvin,
 		Dim:        dim,
 		Power:      power,
+		Visible:    visible,
 	}
 }
 
 // LightSensorState a snapshot of the bulbs ambient light sensor read
 type LightSensorState struct {
-	Lux float32
+	lifxAddress [6]byte // incoming messages are desimanated by lifx address
+	Lux         float32
+}
+
+// GetLifxAddress returns the unique lifx address of the bulb which we queried for light sensor state
+func (l *LightSensorState) GetLifxAddress() string {
+	return fmt.Sprintf("%x", l.lifxAddress)
 }
 
 // Gateway Lifx bulb which is acting as a gateway to the mesh
@@ -188,6 +195,12 @@ func (g *Gateway) findBulbs() error {
 	return nil
 }
 
+// used to feed the event processor
+type cmdEvent struct {
+	addr net.Addr
+	cmd  interface{}
+}
+
 // Client holds all the state and connections for the lifx client.
 type Client struct {
 	gateways      []*Gateway
@@ -198,13 +211,13 @@ type Client struct {
 	peerSocket  net.Conn
 	bcastSocket *net.UDPConn
 	discoTicker *time.Ticker
-	in          chan interface{}
+	commandCh   chan *cmdEvent
 	subs        []*Sub
 }
 
 // NewClient make a new lifx client
 func NewClient() *Client {
-	return &Client{}
+	return &Client{commandCh: make(chan *cmdEvent)}
 }
 
 // StartDiscovery Begin searching for lifx globes on the local LAN
@@ -344,6 +357,8 @@ func (c *Client) startMainEventLoop() {
 
 	buf := make([]byte, 1024)
 
+	go c.readCommands()
+
 	for {
 		n, addr, err := c.bcastSocket.ReadFrom(buf)
 
@@ -361,43 +376,81 @@ func (c *Client) startMainEventLoop() {
 		}
 		//log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
 
-		switch cmd := cmd.(type) {
-		case *panGatewayCommand:
-
-			// found a gw
-			if cmd.Payload.Service == 1 {
-				gw := newGateway(cmd.Header.TargetMacAddress, addr.String(), cmd.Payload.Port, cmd.Header.Site)
-				if err != nil {
-					//log.Printf("failed to setup peer connection to gw")
-				} else {
-					c.addGateway(gw)
-				}
-			}
-
-		case *lightStateCommand:
-
-			// found a bulb
-			bulb := newBulb(cmd.Header.TargetMacAddress)
-			bulb.lastLightState = cmd
-
-			bulb.bulbState = newBulbState(cmd.Payload.Hue, cmd.Payload.Saturation, cmd.Payload.Brightness, cmd.Payload.Kelvin, cmd.Payload.Dim, cmd.Payload.Power)
-
-			c.addBulb(bulb)
-
-		case *powerStateCommand:
-
-			c.updateBulbPowerState(cmd.Header.TargetMacAddress, cmd.Payload.OnOff)
-
-		case *ambientStateCommand:
-			//log.Printf("Recieved lux: %f", cmd.Payload.Lux)
-
-			c.updateAmbientLightState(cmd.Header.TargetMacAddress, cmd.Payload.Lux)
-
-		default:
-			//log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
+		// dispatch a cmdEvent
+		c.commandCh <- &cmdEvent{
+			addr,
+			cmd,
 		}
 
 	}
+}
+
+func (c *Client) readCommands() {
+
+	for {
+
+		select {
+		case cmde := <-c.commandCh:
+			c.processCommandEvent(cmde)
+			c.checkExpired()
+		case <-time.After(10 * time.Second):
+			// the read from command channel has timed out
+			// this happens if all gateway(s) are offline
+			c.checkExpired()
+		}
+
+	}
+
+}
+
+func (c *Client) processCommandEvent(cmde *cmdEvent) {
+	// a read from ch has occurred
+	switch cmd := cmde.cmd.(type) {
+	case *panGatewayCommand:
+
+		// found a gw
+		if cmd.Payload.Service == 1 {
+			gw := newGateway(cmd.Header.TargetMacAddress, cmde.addr.String(), cmd.Payload.Port, cmd.Header.Site)
+			c.addGateway(gw)
+		}
+
+	case *lightStateCommand:
+
+		// found a bulb
+		bulb := newBulb(cmd.Header.TargetMacAddress)
+		bulb.lastLightState = cmd
+
+		bulb.bulbState = newBulbState(cmd.Payload.Hue, cmd.Payload.Saturation, cmd.Payload.Brightness, cmd.Payload.Kelvin, cmd.Payload.Dim, cmd.Payload.Power, true)
+
+		c.addBulb(bulb)
+
+	case *powerStateCommand:
+
+		c.updateBulbPowerState(cmd.Header.TargetMacAddress, cmd.Payload.OnOff)
+
+	case *ambientStateCommand:
+		//log.Printf("Recieved lux: %f", cmd.Payload.Lux)
+
+		c.updateAmbientLightState(cmd.Header.TargetMacAddress, cmd.Payload.Lux)
+
+	default:
+		//log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
+	}
+}
+
+func (c *Client) checkExpired() {
+	// /log.Printf("Check expired devices")
+
+	for _, bulb := range c.bulbs {
+		if time.Now().Sub(bulb.lastSeen) > 10*time.Second {
+			if bulb.GetState().Visible {
+				log.Printf("notifying bulb %s offline", bulb.GetLifxAddress())
+				bulb.bulbState.Visible = false
+				c.notifySubsBulbNew(bulb)
+			}
+		}
+	}
+
 }
 
 func (c *Client) sendDiscovery(t time.Time) {
@@ -447,7 +500,7 @@ func (c *Client) addGateway(gw *Gateway) {
 
 func (c *Client) addBulb(bulb *Bulb) {
 	if !bulbInSlice(bulb, c.bulbs) {
-		bulb.LastSeen = time.Now()
+		bulb.lastSeen = time.Now()
 		c.bulbs = append(c.bulbs, bulb)
 
 		// log.Printf("Added bulb %x state %v", bulb.LifxAddress, bulb.bulbState)
@@ -475,16 +528,13 @@ func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
 	}
 }
 
+// as these readings are independent of the bulb state i am emitting them seperately
 func (c *Client) updateAmbientLightState(lifxAddress [6]byte, lux float32) {
-	for _, b := range c.bulbs {
-		// this needs further investigation
-		if lifxAddress == b.LifxAddress {
-			b.lightSensorState = &LightSensorState{lux}
 
-			// notify subscribers
-			go c.notifySubsBulbNew(b)
-		}
-	}
+	lightSensorState := &LightSensorState{lifxAddress, lux}
+
+	// notify subscribers
+	go c.notifySubsSensorReading(lightSensorState)
 }
 
 func (c *Client) notifySubsGwNew(gw *Gateway) {
@@ -499,6 +549,14 @@ func (c *Client) notifySubsBulbNew(bulb *Bulb) {
 	for _, sub := range c.subs {
 		// check if it is open
 		sub.Events <- bulb
+	}
+}
+
+// dereference light sensor and pass it to the subscriber via the out channel
+func (c *Client) notifySubsSensorReading(lightsensor *LightSensorState) {
+	for _, sub := range c.subs {
+		// check if it is open
+		sub.Events <- lightsensor
 	}
 }
 

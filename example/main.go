@@ -42,6 +42,8 @@ func realMain() int {
 				log.Printf("Bulb Update %s", event.GetLifxAddress())
 				log.Printf(spew.Sprintf("%+v", event))
 				event.SetStateHandler(buildHandler(event.GetLifxAddress()))
+			case *lifx.LightSensorState:
+				log.Printf("Light Sensor Update %s %f", event.GetLifxAddress(), event.Lux)
 			default:
 				log.Printf("Event %+v", event)
 			}
