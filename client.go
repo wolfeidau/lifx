@@ -59,6 +59,11 @@ func (b *Bulb) GetLabel() string {
 	return string(bytes.Trim(b.lastLightState.Payload.BulbLabel[:], "\x00"))
 }
 
+// String is primarily for the fmt package to properly print instances of *Bulb
+func (b *Bulb) String() string {
+	return b.GetLabel()
+}
+
 // SetStateHandler add a handler which is invoked each time a state change comes through
 func (b *Bulb) SetStateHandler(handler StateHandler) {
 	//log.Printf("bulb %s", b)
