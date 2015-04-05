@@ -1,4 +1,4 @@
-# lifx [![GoDoc](https://img.shields.io/badge/godoc-Reference-brightgreen.svg?style=flat)](http://godoc.org/github.com/wolfeidau/lifx)
+# lifx [![GoDoc](https://img.shields.io/badge/godoc-Reference-brightgreen.svg?style=flat)](http://godoc.org/github.com/wolfeidau/lifx) [![Build Status](https://travis-ci.org/wolfeidau/lifx.svg?branch=master)](https://travis-ci.org/wolfeidau/lifx)
 
 Hacking on a client for the [lifx](http://lifx.co) light bulb, this is based on the work already done in the [lifxjs](https://github.com/magicmonkey/lifxjs) and [go-lifx](https://github.com/bjeanes/go-lifx).
 
