@@ -3,7 +3,6 @@ package lifx
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 )
@@ -15,7 +14,6 @@ type command interface {
 }
 
 func decodeCommand(buf []byte) (command, error) {
-
 	// read and validate the packet header
 	ph, err := decodePacketHeader(buf)
 
@@ -36,7 +34,7 @@ func decodeCommand(buf []byte) (command, error) {
 		return decodeTagsCommand(ph, buf[HeaderLen:])
 	}
 
-	return nil, errors.New(fmt.Sprintf("Unrecognised type 0x%x", ph.PacketType))
+	return nil, fmt.Errorf("Unrecognised type 0x%x", ph.PacketType)
 }
 
 type commandPacket struct {
@@ -219,7 +217,6 @@ func newSetLightColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing
 }
 
 func (c *setLightColour) WriteTo(wr io.Writer) (int, error) {
-
 	buf := new(bytes.Buffer)
 
 	err := binary.Write(buf, binary.LittleEndian, &c.Payload)
@@ -269,7 +266,6 @@ func newSetPowerStateCommand(onoff uint16) *setPowerStateCommand {
 }
 
 func (c *setPowerStateCommand) WriteTo(wr io.Writer) (int, error) {
-
 	buf := []byte{0x0, 0x0}
 
 	binary.BigEndian.PutUint16(buf, c.Payload.OnOff)
@@ -318,7 +314,6 @@ type tagsCommand struct {
 }
 
 func decodeTagsCommand(ph *packetHeader, payload []byte) (*tagsCommand, error) {
-
 	cmd := &tagsCommand{}
 	cmd.Header = ph
 
