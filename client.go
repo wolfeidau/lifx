@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"reflect"
+	"sync"
 	"time"
 )
 
@@ -57,6 +58,11 @@ func (b *Bulb) GetPower() uint16 {
 // GetLabel Get the label from the globe
 func (b *Bulb) GetLabel() string {
 	return string(bytes.Trim(b.lastLightState.Payload.BulbLabel[:], "\x00"))
+}
+
+// GetTags returns the tags identifier for the bulb.
+func (b *Bulb) GetTags() uint64 {
+	return b.lastLightState.Payload.Tags
 }
 
 // String is primarily for the fmt package to properly print instances of *Bulb
@@ -221,6 +227,9 @@ type Client struct {
 	discoTicker *time.Ticker
 	commandCh   chan *cmdEvent
 	subs        []*Sub
+
+	tags      map[uint64][]byte // the tags known to the client
+	tagsMutex sync.RWMutex      // mutex for locking the tags map
 }
 
 // NewClient make a new lifx client
@@ -333,6 +342,28 @@ func (c *Client) Subscribe() *Sub {
 	return sub
 }
 
+// Tags returns the known tags of the LIFX cluster.
+// This requires that StartDiscovery() has been ran and fnished
+//
+// The value returned is a map[uint64][]byte.
+// The uint64 value is the tag's ID, and the byte slice is the label
+func (c *Client) Tags() map[uint64][]byte {
+	// the tags map is a moving target
+	// so we need to make a copy to return
+	tags := make(map[uint64][]byte)
+
+	// take the read lock and defer the unlock
+	c.tagsMutex.RLock()
+	defer c.tagsMutex.RUnlock()
+
+	// copy the c.tags map to the new one
+	for k, v := range c.tags {
+		tags[k] = v
+	}
+
+	return tags
+}
+
 func (c *Client) sendTo(bulb *Bulb, cmd command) error {
 
 	cmd.SetLifxAddr(bulb.LifxAddress) // ensure the message is addressed to the correct bulb
@@ -441,6 +472,12 @@ func (c *Client) processCommandEvent(cmde *cmdEvent) {
 
 		c.updateAmbientLightState(cmd.Header.TargetMacAddress, cmd.Payload.Lux)
 
+	case *tagsCommand:
+		c.updateTags(cmd.Header.Site, cmd.Payload.Tags)
+
+	case *tagLabelsCommand:
+		c.updateTagLabels(cmd.Payload.Tags, cmd.Payload.Label)
+
 	default:
 		//log.Printf("Recieved command: %s", reflect.TypeOf(cmd))
 	}
@@ -543,6 +580,44 @@ func (c *Client) updateAmbientLightState(lifxAddress [6]byte, lux float32) {
 
 	// notify subscribers
 	go c.notifySubsSensorReading(lightSensorState)
+}
+
+// we've received a new tagsCommand packet, so let's update
+// the label for that specific tag
+func (c *Client) updateTags(site [6]byte, tags uint64) {
+	// send this request to all to make sure we
+	// get a list of all of the tags in use
+	c.sendToAll(newGetTagLabelsCommand(site, tags))
+}
+
+// we've received a response regarding a specific tag's label,
+// let's update the internal map with its label
+func (c *Client) updateTagLabels(tags uint64, label [32]byte) {
+	// convert the byte array to a byte slice with null bytes removed
+	labelSlice := bytes.Trim(label[:], "\x00")
+
+	// if the label is empty and c.tags isn't nil:
+	// make sure that tag is removed from the map
+	if len(labelSlice) == 0 && c.tags != nil {
+		// take the write lock and defer the unlock
+		c.tagsMutex.Lock()
+		defer c.tagsMutex.Unlock()
+
+		// delete the tags value from the c.tags map
+		delete(c.tags, tags)
+
+		return
+	}
+
+	// take the write lock and defer the unlock
+	c.tagsMutex.Lock()
+	defer c.tagsMutex.Unlock()
+
+	if c.tags == nil {
+		c.tags = make(map[uint64][]byte)
+	}
+
+	c.tags[tags] = labelSlice
 }
 
 func (c *Client) notifySubsGwNew(gw *Gateway) {
