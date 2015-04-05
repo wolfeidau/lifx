@@ -151,14 +151,15 @@ func (g *Gateway) GetSite() string {
 }
 
 func newGateway(lifxAddress [6]byte, hostAddress string, port uint16, site [6]byte) *Gateway {
-
-	gw := &Gateway{lifxAddress: lifxAddress, hostAddress: hostAddress, Port: port, Site: site}
-
-	return gw
+	return &Gateway{
+		lifxAddress: lifxAddress,
+		hostAddress: hostAddress,
+		Port:        port,
+		Site:        site,
+	}
 }
 
 func (g *Gateway) sendTo(cmd command) error {
-
 	// can we connect to the gw
 	addr, err := net.ResolveUDPAddr("udp4", g.hostAddress)
 
@@ -188,7 +189,6 @@ func (g *Gateway) sendTo(cmd command) error {
 }
 
 func (g *Gateway) findBulbs() error {
-
 	// get Light State
 	lcmd := newGetLightStateCommand(g.Site)
 
@@ -239,7 +239,6 @@ func NewClient() *Client {
 
 // StartDiscovery Begin searching for lifx globes on the local LAN
 func (c *Client) StartDiscovery() (err error) {
-
 	//log.Printf("Listening for bcast :%d", BroadcastPort)
 
 	// this socket will recieve broadcast packets on this socket
@@ -270,7 +269,6 @@ func (c *Client) StartDiscovery() (err error) {
 
 // LightsOn turn all lifx bulbs on
 func (c *Client) LightsOn() error {
-
 	cmd := newSetPowerStateCommand(bulbOn)
 
 	return c.sendToAll(cmd)
@@ -278,7 +276,6 @@ func (c *Client) LightsOn() error {
 
 // LightsOff turn all lifx bulbs off
 func (c *Client) LightsOff() error {
-
 	cmd := newSetPowerStateCommand(bulbOff)
 
 	return c.sendToAll(cmd)
@@ -286,7 +283,6 @@ func (c *Client) LightsOff() error {
 
 // LightsColour changes the color of all lifx bulbs
 func (c *Client) LightsColour(hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error {
-
 	cmd := newSetLightColour(hue, sat, lum, kelvin, timing)
 
 	return c.sendToAll(cmd)
@@ -294,7 +290,6 @@ func (c *Client) LightsColour(hue uint16, sat uint16, lum uint16, kelvin uint16,
 
 // LightOn turn on a bulb
 func (c *Client) LightOn(bulb *Bulb) error {
-
 	cmd := newSetPowerStateCommand(bulbOn)
 
 	return c.sendTo(bulb, cmd)
@@ -302,7 +297,6 @@ func (c *Client) LightOn(bulb *Bulb) error {
 
 // LightOff turn off a bulb
 func (c *Client) LightOff(bulb *Bulb) error {
-
 	cmd := newSetPowerStateCommand(bulbOff)
 
 	return c.sendTo(bulb, cmd)
@@ -310,7 +304,6 @@ func (c *Client) LightOff(bulb *Bulb) error {
 
 // LightColour change the color of a bulb
 func (c *Client) LightColour(bulb *Bulb, hue uint16, sat uint16, lum uint16, kelvin uint16, timing uint32) error {
-
 	cmd := newSetLightColour(hue, sat, lum, kelvin, timing)
 
 	return c.sendTo(bulb, cmd)
@@ -365,7 +358,6 @@ func (c *Client) Tags() map[uint64][]byte {
 }
 
 func (c *Client) sendTo(bulb *Bulb, cmd command) error {
-
 	cmd.SetLifxAddr(bulb.LifxAddress) // ensure the message is addressed to the correct bulb
 
 	for _, gw := range c.gateways {
@@ -393,7 +385,6 @@ func (c *Client) sendToAll(cmd command) error {
 
 // This function handles all response messages and dispatches events subscribers
 func (c *Client) startMainEventLoop() {
-
 	buf := make([]byte, 1024)
 
 	go c.readCommands()
@@ -425,9 +416,7 @@ func (c *Client) startMainEventLoop() {
 }
 
 func (c *Client) readCommands() {
-
 	for {
-
 		select {
 		case cmde := <-c.commandCh:
 			c.processCommandEvent(cmde)
@@ -446,7 +435,6 @@ func (c *Client) processCommandEvent(cmde *cmdEvent) {
 	// a read from ch has occurred
 	switch cmd := cmde.cmd.(type) {
 	case *panGatewayCommand:
-
 		// found a gw
 		if cmd.Payload.Service == 1 {
 			gw := newGateway(cmd.Header.TargetMacAddress, cmde.addr.String(), cmd.Payload.Port, cmd.Header.Site)
@@ -454,7 +442,6 @@ func (c *Client) processCommandEvent(cmde *cmdEvent) {
 		}
 
 	case *lightStateCommand:
-
 		// found a bulb
 		bulb := newBulb(cmd.Header.TargetMacAddress)
 		bulb.lastLightState = cmd
@@ -464,7 +451,6 @@ func (c *Client) processCommandEvent(cmde *cmdEvent) {
 		c.addBulb(bulb)
 
 	case *powerStateCommand:
-
 		c.updateBulbPowerState(cmd.Header.TargetMacAddress, cmd.Payload.OnOff)
 
 	case *ambientStateCommand:
@@ -499,8 +485,8 @@ func (c *Client) checkExpired() {
 }
 
 func (c *Client) sendDiscovery(t time.Time) {
-
 	//log.Println("Discovery packet sent at", t)
+
 	socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{
 		IP:   net.IPv4(255, 255, 255, 255),
 		Port: BroadcastPort,
@@ -575,7 +561,6 @@ func (c *Client) updateBulbPowerState(lifxAddress [6]byte, onoff uint16) {
 
 // as these readings are independent of the bulb state i am emitting them seperately
 func (c *Client) updateAmbientLightState(lifxAddress [6]byte, lux float32) {
-
 	lightSensorState := &LightSensorState{lifxAddress, lux}
 
 	// notify subscribers
@@ -649,9 +634,7 @@ type Sub struct {
 }
 
 func newSub() *Sub {
-	sub := &Sub{}
-	sub.Events = make(chan interface{}, 1)
-	return sub
+	return &Sub{Events: make(chan interface{}, 1)}
 }
 
 func gatewayInSlice(a *Gateway, list []*Gateway) bool {

@@ -75,7 +75,6 @@ func decodePacketHeader(buf []byte) (*packetHeader, error) {
 }
 
 func (p *packetHeader) Encode(wr io.Writer) (int, error) {
-
 	buf := new(bytes.Buffer)
 
 	err := binary.Write(buf, binary.LittleEndian, p)

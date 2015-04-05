@@ -7,7 +7,6 @@ import (
 )
 
 func TestGetPANGatewayCommandWrite(t *testing.T) {
-
 	buf := new(bytes.Buffer)
 
 	c := newGetPANGatewayCommand()
@@ -29,7 +28,6 @@ func TestGetPANGatewayCommandWrite(t *testing.T) {
 }
 
 func TestPANGatewayCommandDecode(t *testing.T) {
-
 	buf := panGatewayMsg()
 
 	cmd, err := decodeCommand(buf)
@@ -56,7 +54,6 @@ func TestPANGatewayCommandDecode(t *testing.T) {
 }
 
 func TestSetPowerStateCommandWrite(t *testing.T) {
-
 	buf := new(bytes.Buffer)
 	addr := [6]byte{0xd0, 0x73, 0xd5, 0x00, 0x35, 0xf7}
 	//	site := [6]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
@@ -83,7 +80,6 @@ func TestSetPowerStateCommandWrite(t *testing.T) {
 }
 
 func TestPowerStateCommandDecode(t *testing.T) {
-
 	buf := powerStateMsg()
 
 	cmd, err := decodeCommand(buf)
