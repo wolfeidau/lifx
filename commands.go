@@ -34,6 +34,8 @@ func decodeCommand(buf []byte) (command, error) {
 		return decodePowerStateCommand(ph, buf[HeaderLen:])
 	case PktTags:
 		return decodeTagsCommand(ph, buf[HeaderLen:])
+	case PktTagLabels:
+		return decodeTagLabelsCommand(ph, buf[HeaderLen:])
 	}
 
 	return nil, errors.New(fmt.Sprintf("Unrecognised type 0x%x", ph.PacketType))
@@ -315,15 +317,62 @@ func newGetTagsCommand(site [6]byte) *getTagsCommand {
 // TagsCommand 0x1c
 type tagsCommand struct {
 	commandPacket
+	Payload struct {
+		Tags uint64
+	}
 }
 
 func decodeTagsCommand(ph *packetHeader, payload []byte) (*tagsCommand, error) {
-
 	cmd := &tagsCommand{}
 	cmd.Header = ph
 
 	// decode payload
 	//log.Printf("payload len : %d", len(payload))
+	decodePayload(payload, &cmd.Payload)
+
+	//log.Printf("Command: \n %s", spew.Sdump(cmd))
+
+	return cmd, nil
+}
+
+// GetTagLabelsCommand 0x1d
+type getTagLabelsCommand struct {
+	commandPacket
+	Payload struct {
+		Tags uint64
+	}
+}
+
+func newGetTagLabelsCommand(site [6]byte, tags uint64) *getTagLabelsCommand {
+	ph := newPacketHeader(PktGetTagLabels)
+	ph.Protocol = 0x1400
+	ph.Site = site
+
+	cmd := &getTagLabelsCommand{}
+	cmd.Header = ph
+	cmd.Payload = struct{ Tags uint64 }{Tags: tags}
+
+	return cmd
+}
+
+// TagLabelsCommand 0x1f
+type tagLabelsCommand struct {
+	commandPacket
+	Payload struct {
+		Tags  uint64
+		Label [32]byte
+	}
+}
+
+func decodeTagLabelsCommand(ph *packetHeader, payload []byte) (*tagLabelsCommand, error) {
+	cmd := &tagLabelsCommand{}
+	cmd.Header = ph
+
+	// decode payload
+	//log.Printf("payload len : %d", len(payload))
+	decodePayload(payload, &cmd.Payload)
+
+	//log.Printf("Command: \n %s", spew.Sdump(cmd))
 
 	return cmd, nil
 }
