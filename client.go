@@ -313,14 +313,14 @@ func (c *Client) GetBulbs() []*Bulb {
 
 // GetBulbState send a notification to the bulb to emit it's current state
 func (c *Client) GetBulbState(bulb *Bulb) error {
-	log.Printf("GetBulbState sent to %s", bulb.GetLifxAddress())
+	//log.Printf("GetBulbState sent to %s", bulb.GetLifxAddress())
 	cmd := newGetLightStateCommandFromBulb(bulb.LifxAddress)
 	return c.sendTo(bulb, cmd)
 }
 
 // GetAmbientLight send a notification to the bulb to emit the current ambient light
 func (c *Client) GetAmbientLight(bulb *Bulb) error {
-	log.Printf("GetAmbientLight sent to %s", bulb.GetLifxAddress())
+	//log.Printf("GetAmbientLight sent to %s", bulb.GetLifxAddress())
 	cmd := newGetAmbientLightCommandFromBulb(bulb.LifxAddress)
 	return c.sendTo(bulb, cmd)
 }
@@ -472,7 +472,7 @@ func (c *Client) checkExpired() {
 	for _, bulb := range c.bulbs {
 		if time.Now().Sub(bulb.lastSeen) > 10*time.Second {
 			if bulb.GetState().Visible {
-				log.Printf("notifying bulb %s offline", bulb.GetLifxAddress())
+				//log.Printf("notifying bulb %s offline", bulb.GetLifxAddress())
 				bulb.bulbState.Visible = false
 				if bulb.stateHandler != nil {
 					bulb.stateHandler(bulb.bulbState)
